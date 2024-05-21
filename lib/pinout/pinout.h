@@ -33,6 +33,8 @@ public:
             RFM95_CS = 12;
             battPin = 9;
             ledPin = 4;
+            RxPin = 18;
+            TxPin = 17;
         }
         if (model == "v3.1") {
             BOOT0 = 0;
@@ -59,6 +61,8 @@ public:
             RFM95_CS = 12;
             battPin = 9;
             ledPin = 4;
+            RxPin = 18;
+            TxPin = 17;
         }
     };
     int ledPin;
@@ -88,6 +92,9 @@ public:
     int RFM95_INT;
     int RFM95_CS;
     int battPin;
+    int RxPin; 
+    int TxPin;
+
     // Function to combine RGB components into a 32-bit color value
     uint32_t neopixelColor(uint8_t red, uint8_t green, uint8_t blue) {
         return (uint32_t(red) << 16) | (uint32_t(green) << 8) | blue;

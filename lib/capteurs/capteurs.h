@@ -21,6 +21,7 @@ public:
     void accBuffering(int meas);
     bool initSens(String sens);
     void getSens(String sens);
+    void HMRsetup();
     int genVar = 5;
     int id = 0;
     String type = "";
