@@ -1,6 +1,7 @@
 #include "capteurs.h"
 
-capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr) {
+capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr)
+{
     pins = p;
     rtc = r;
     fs = &f;
@@ -10,10 +11,12 @@ capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr) {
     id = preferences->getUInt("id", 0);
     preferences->end();
 }
-float capteurs::measBatt() {
+float capteurs::measBatt()
+{
     float cellVolt;
     int count = 0;
-    for (int battCount = 1; battCount <= 100; battCount++) {
+    for (int battCount = 1; battCount <= 100; battCount++)
+    {
         count++;
         float meas = analogRead(pins->battPin);
         cellVolt = (float)((float)((float)(cellVolt * (count - 1)) + (float)analogRead(pins->battPin)) / (float)count); // reading pin to measure battery level
@@ -22,9 +25,11 @@ float capteurs::measBatt() {
     battSend = cellVolt * 100;
     return cellVolt;
 }
-bool capteurs::lsmSetup(void) {
+bool capteurs::lsmSetup(void)
+{
     /*set up accelerometer*/
-    if (!dsox.begin_I2C()) {
+    if (!dsox.begin_I2C())
+    {
         Serial.println("LSM not found");
         return false;
     };
@@ -38,12 +43,14 @@ bool capteurs::lsmSetup(void) {
     return true;
 }
 
-bool capteurs::adxlSetup(void) {
+bool capteurs::adxlSetup(void)
+{
     SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI, pins->ADXL375_CS);
     SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
     digitalWrite(pins->RFM95_CS, HIGH);
     digitalWrite(pins->ADXL375_CS, LOW);
-    if (!adxl->begin()) {
+    if (!adxl->begin())
+    {
         Serial.println("could not find ADXL");
         return false;
     }
@@ -52,7 +59,8 @@ bool capteurs::adxlSetup(void) {
     digitalWrite(pins->ADXL375_CS, HIGH);
     return true;
 }
-void capteurs::accBuffering(int meas) {
+void capteurs::accBuffering(int meas)
+{
     // divide int to two bytes
     sdBuf[r] = highByte(meas);
     r++;
@@ -60,39 +68,123 @@ void capteurs::accBuffering(int meas) {
     r++;
 }
 
-bool capteurs::initSens(String sens) {
+void lire()
+{
+    while (Serial2.available())
+    {
+        Serial.print((char)Serial2.read());
+    }
+    Serial.println();
+    delay(100);
+}
+
+void capteurs::HMRsetup()
+{
+    digitalWrite(pins->ON_SICK, HIGH);
+    Serial.println("HMRSetup");
+    delay(100);
+    Serial2.print("*99WE\r");
+    Serial2.flush();
+    lire();
+    delay(2000);
+
+    Serial2.print("*99ID\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00WE\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00B\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00WE\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00R=100\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00WE\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00TN\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00WE\r");
+    Serial2.flush();
+    lire();
+    delay(200);
+
+    Serial2.print("*00C\r");
+    Serial2.flush();
+    Serial.println("HMR setup done");
+}
+
+bool capteurs::initSens(String sens)
+{
     Serial.println(sens);
-    if (sens == "lsm") {
+    if (sens == "lsm")
+    {
         return lsmSetup();
-    } else if (sens == "adxl") {
+    }
+    else if (sens == "adxl")
+    {
         return adxlSetup();
-    } else if (sens == "sick") {
+    }
+    if (sens == "sick")
+    {
         digitalWrite(pins->ON_SICK, HIGH);
+        return true;
+    }
+    else if (sens == "hmr") // add line for HMR
+    {
+        HMRsetup();
+        // digitalWrite(pins->ON_SICK, HIGH);
         return true;
     }
     return false;
 }
 
-void capteurs::getSens(String sens) {
-    if (sens == "lsm") {
+void capteurs::getSens(String sens)
+{
+    if (sens == "lsm")
+    {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
         accBuffering((int)(accel.acceleration.x * 100));
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
         return;
-    } else if (sens == "adxl") {
+    }
+    else if (sens == "adxl")
+    {
         sensors_event_t event;
         adxl->getEvent(&event);
         accBuffering((int)(event.acceleration.x * 100));
         accBuffering((int)(event.acceleration.y * 100));
         accBuffering((int)(event.acceleration.z * 100));
         return;
-    } else if (sens == "sick") {
+    }
+    if (sens == "sick")
+    {
         int micros1 = micros();
         int count1 = 0;
         float val1 = 0;
-        while ((micros() - micros1) < 1000) {
+        while ((micros() - micros1) < 1000)
+        {
             count1++;
             val1 = (float)((val1 * (count1 - 1) + (float)analogRead(pins->SICK1)) / (float)count1); // read adc
         }
@@ -100,11 +192,44 @@ void capteurs::getSens(String sens) {
         accBuffering(val);
         return;
     }
+    else if (sens == "hmr") // add variables for HMR measure
+    {
+        int time1;
+        byte c = 0;
+        int high = 0;
+        int low = 0;
+        int hmr_val = 0;
+        time1 = micros();
+
+        while (c != 0x0D)
+        {
+            c = Serial2.read();
+        }
+        c = 0;
+
+        while (Serial2.available() < 6)
+        {
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            high = Serial2.read();
+            low = Serial2.read();
+            hmr_val = high << 8 | low;
+            accBuffering(hmr_val);
+            Serial.print(hmr_val);
+            Serial.print(",");
+        }
+        Serial.println();
+        // digitalWrite(pins->ON_SICK, bSick);
+    }
     return;
 }
 
-void capteurs::saveSens(String sens, int sensTime) {
-    if (!initSens(sens)) {
+void capteurs::saveSens(String sens, int sensTime)
+{
+    if (!initSens(sens))
+    {
         return;
     }
     // if (!sdmmcSetup()) {
@@ -113,7 +238,8 @@ void capteurs::saveSens(String sens, int sensTime) {
     // }
     // create folder for file
     int startTime = 123456789;
-    if (rtc->rtcConnected) {
+    if (rtc->rtcConnected)
+    {
         DateTime startDate = rtc->rtc.now();
         startTime = startDate.unixtime();
     }
@@ -125,14 +251,18 @@ void capteurs::saveSens(String sens, int sensTime) {
     String name = "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
     int index = 0;
     Serial.println("SUBSTRINGS OF " + name);
-    while (name.indexOf("/", index) >= 0) {
+    while (name.indexOf("/", index) >= 0)
+    {
         int start = name.indexOf("/", index) + 1;
         index = name.indexOf("/", index) + 1;
         int end = name.indexOf("/", index);
-        if (end >= 0) {
+        if (end >= 0)
+        {
             String dirCreate = SD_MMC.mkdir(name.substring(0, end)) ? "dir " + name.substring(0, end) + " created " : " dir not created ";
             Serial.println(dirCreate);
-        } else {
+        }
+        else
+        {
             Serial.println("file : /" + name.substring(start));
         }
     }
@@ -146,8 +276,10 @@ void capteurs::saveSens(String sens, int sensTime) {
     unsigned long time0 = micros();
     newName = fn;
 
-    if (file) {
-        while ((millis() - startMillis) < sensTime * 1000) {
+    if (file)
+    {
+        while ((millis() - startMillis) < sensTime * 1000)
+        {
             // change LED color
             float prog = ((float)(millis() - startMillis)) / ((float)(sensTime * 1000));
             neopixelWrite(pins->LED, pins->bright * (1.0 - prog), 0, pins->bright * prog); // r->b
@@ -156,7 +288,8 @@ void capteurs::saveSens(String sens, int sensTime) {
             r = 0;
             // accBuffering((int)(millis() - startMillis));
             unsigned long ta_micro = micros() - time0;
-            for (size_t i = 0; i < 4; i++) {
+            for (size_t i = 0; i < 4; i++)
+            {
                 sdBuf[r] = lowByte(ta_micro >> 8 * (3 - i));
                 r++;
             }
@@ -164,7 +297,8 @@ void capteurs::saveSens(String sens, int sensTime) {
             getSens(sens);
 
             // write data
-            for (int j = 0; j < r; j++) {
+            for (int j = 0; j < r; j++)
+            {
                 file.write(sdBuf[j]);
             }
         }
@@ -173,7 +307,8 @@ void capteurs::saveSens(String sens, int sensTime) {
     file.close();
     digitalWrite(pins->ON_SICK, bSick);
 }
-void capteurs::pinSetup() {
+void capteurs::pinSetup()
+{
     pinMode(pins->ADXL375_SCK, OUTPUT);
     pinMode(pins->ADXL375_MOSI, OUTPUT);
     pinMode(pins->ADXL375_MISO, INPUT_PULLDOWN);
