@@ -62,7 +62,7 @@ void sendRSSI() {
 void mainTask() {
     Serial.println("main");
     // digitalWrite(pins.ON_SICK, HIGH);
-    pins.rainbowLoop(10);
+    // pins.rainbowLoop(10);
     cap.type = "sick";
     int genVar = 10;
     cap.saveSens(cap.type, genVar);
