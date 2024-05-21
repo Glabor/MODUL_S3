@@ -1,5 +1,5 @@
 #include "charger.h"
-
+// test
 charger::charger(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, capteurs *c, AsyncWebServer *s, AsyncWebSocket *w, comLORA *l) {
     pins = p;
     rtc = r;
@@ -135,6 +135,13 @@ String charger::processor(const String &var) {
 
         return (String(idRead));
     }
+    if (var == "SLEEP") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleep", 33);
+        preferences->end();
+
+        return (String(idRead));
+    }
     if (var == "SSID") {
         preferences->begin("prefid", false);
         String prefSSID = preferences->getString("SSID", ssid);
@@ -148,6 +155,13 @@ String charger::processor(const String &var) {
         preferences->end();
 
         return (String(prefPWD));
+    }
+    if (var == "HOST") {
+        preferences->begin("prefid", false);
+        String prefHost = preferences->getString("host", host);
+        preferences->end();
+
+        return (String(prefHost));
     }
     if (var == "GENERAL") {
         return (String(cap->genVar)); // utilisee pour acctime
@@ -255,6 +269,12 @@ void charger::serverRoutes() {
         request->redirect("/sd");
     });
 
+    server->on("/new", HTTP_GET, [&](AsyncWebServerRequest *request) {
+        Serial.println("accessing new");
+        // Serial.println("/" + cap->type + ".bin");
+        Serial.println(cap->newName);
+        request->send(SD_MMC, cap->newName, "text/plain", false);
+    });
     Serial.println("server ok");
 }
 int charger::httpPostRequest(String serverName, String postText) {
@@ -281,9 +301,47 @@ int charger::sendFlask() {
     JsonDocument info;
     info["batt"] = cap->battSend;
     info["bWifi"] = bWifi;
+    info["etrNum"] = cap->id;
+
     String infoPost;
     serializeJson(info, infoPost);
-    int responseCode = httpPostRequest("http://LAPTOP-TF0BBSC1:5000/batt", infoPost);
+    int responseCode = httpPostRequest(host + "/batt", infoPost);
+    Serial.println(responseCode);
+    if (responseCode > 0) {
+        // connected flask on
+        bWifi = true;
+        return responseCode;
+    } else if (responseCode == 0) {
+        // connected flask on / no wifi
+        bWifi = false;
+        if (rtc->rtcConnected && rtc->chg) {
+            rtc->rtc.setAlarm1(rtc->rtc.now() + 90, DS3231_A1_Date);
+            rtc->rtc.clearAlarm(1);
+            neopixelWrite(pins->LED, 0, 0, 0); // 0
+            esp_deep_sleep(60e6);
+        }
+        return responseCode;
+    }
+    // connected flask off
+    return responseCode;
+}
+
+int charger::sendSens(String type) {
+    JsonDocument info;
+    bool bWifi = true;
+    int timestamp = rtc->rtc.now().unixtime();
+    float rtcTemp = rtc->rtc.getTemperature();
+
+    info["batt"] = cap->measBatt();
+    info["bWifi"] = bWifi;
+    info["etrNum"] = cap->id;
+    info["timestamp"] = timestamp;
+    info["rtcTemp"] = rtcTemp;
+    info["type"] = type;
+
+    String infoPost;
+    serializeJson(info, infoPost);
+    int responseCode = httpPostRequest("http://LAPTOP-TF0BBSC1:5000/sens", infoPost);
     Serial.println(responseCode);
     if (responseCode > 0) {
         // connected flask on
@@ -322,19 +380,21 @@ bool charger::wifiConnect() {
     // Connect to Wi-Fi
     int count1 = 0;
     int count2 = 0;
+    Serial.print("Connecting Wifi : ");
+    Serial.println(ssid);
     WiFi.mode(WIFI_MODE_APSTA);
     if (WiFi.status() != WL_CONNECTED) {
         while (count1 < 3 && (WiFi.status() != WL_CONNECTED)) {
             count1++;
             WiFi.begin(ssid, password);
             // WiFi.begin(ssid);
-            while (count2 < 3 && (WiFi.status() != WL_CONNECTED)) {
+            while (count2 < 10 && (WiFi.status() != WL_CONNECTED)) {
                 count2++;
-                delay(100);
+                delay(200);
                 neopixelWrite(pins->LED, pins->bright, 0, 0); // R
-                delay(100);
+                delay(200);
                 neopixelWrite(pins->LED, 0, 0, 0); // 0
-                delay(100);
+                delay(200);
                 Serial.println("Connecting to WiFi..");
             }
             if (WiFi.status() == WL_CONNECTED) {
@@ -410,10 +470,10 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             if (myObject.containsKey("id")) {
                 prints["print"] = String((const char *)myObject["id"]).toInt();
 
-                id = String((const char *)myObject["id"]).toInt();
+                cap->id = String((const char *)myObject["id"]).toInt();
 
                 preferences->begin("prefid", false);
-                preferences->putUInt("id", id);
+                preferences->putUInt("id", cap->id);
                 preferences->end();
             }
             if (myObject.containsKey("blink")) {
@@ -423,6 +483,15 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
 
                 preferences->begin("prefid", false);
                 preferences->putUInt("blink", blink);
+                preferences->end();
+            }
+            if (myObject.containsKey("sleep")) {
+                prints["print"] = String((const char *)myObject["sleep"]).toInt();
+
+                int sleep = String((const char *)myObject["sleep"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("sleep", sleep);
                 preferences->end();
             }
             if (myObject.containsKey("ssid")) {
@@ -443,6 +512,15 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 preferences->putString("PWD", password);
                 preferences->end();
             }
+            if (myObject.containsKey("host")) {
+                prints["print"] = String((const char *)myObject["host"]);
+
+                host = (const char *)myObject["host"];
+
+                preferences->begin("prefid", false);
+                preferences->putString("host", host);
+                preferences->end();
+            }
             if (myObject.containsKey("gen")) {
                 prints["print"] = String((const char *)myObject["gen"]).toInt();
                 cap->genVar = String((const char *)myObject["gen"]).toInt();
@@ -455,15 +533,16 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     }
 }
 void charger::setup() {
+    pinMode(pins->BOOT0, INPUT_PULLUP);
     preferences->begin("prefid", false);
-    id = preferences->getUInt("id", 0);
+    cap->id = preferences->getUInt("id", 0);
     blink = preferences->getUInt("blink", 5);
-    preferences->end();
-    serverRoutes();
-    preferences->begin("prefid", false);
     ssid = preferences->getString("SSID", ssid);
     password = preferences->getString("PWD", password);
+    host = preferences->getString("host", host);
     preferences->end();
+    serverRoutes();
+    ElegantOTA.begin(server); // Start ElegantOTA
 }
 void charger::loopWS() {
     // sending with websockets
@@ -483,17 +562,17 @@ void charger::loopWS() {
                         String(cap->accel.acceleration.z);
     }
     if (bS_LSM) {
-        cap->saveSens("lsm");
+        cap->saveSens("lsm", cap->genVar);
         bS_LSM = false;
         neopixelWrite(pins->LED, pins->bright, pins->bright / 2, 0); // Orange
     }
     if (bS_ADXL) {
-        cap->saveSens("adxl");
+        cap->saveSens("adxl", cap->genVar);
         bS_ADXL = false;
         neopixelWrite(pins->LED, pins->bright, pins->bright / 2, 0); // Orange
     }
     if (bS_SICK) {
-        cap->saveSens("sick");
+        cap->saveSens("sick", cap->genVar);
         bS_SICK = false;
         neopixelWrite(pins->LED, pins->bright, pins->bright / 2, 0); // Orange
     }
@@ -541,7 +620,10 @@ int charger::manageLoop() {
     } else {
         if (!rtc->chg) {
             // sleep
-            rtc->goSleep(30);
+            preferences->begin("prefid", false);
+            int idRead = preferences->getUInt("sleep", 33);
+            preferences->end();
+            rtc->goSleep(idRead);
         } else {
             // listen local
             comTO = 60;
@@ -552,9 +634,9 @@ int charger::manageLoop() {
     }
     return comTO;
 }
-void charger::routinecharge() {
+void charger::routinecharge(void (*task)()) {
     if (!rtc->chg && !taskDone) {
-        normalTask();
+        task();
         taskDone = true;
         Serial.println("task done");
     }
@@ -571,12 +653,13 @@ void charger::routinecharge() {
         pins->loopBlink(bBlink);
         bBlink = !bBlink;
         blinkTO = millis() + 500;
-        if (rtc->chg) {
+        if (rtc->rtcConnected && rtc->chg) {
             rtc->rtc.setAlarm1(rtc->rtc.now() + 10, DS3231_A1_Date);
             rtc->rtc.clearAlarm(1);
         }
     }
 }
+
 void charger::normalTask() {
     for (size_t i = 0; i < blink; i++) {
         pins->rainbowLoop(10);

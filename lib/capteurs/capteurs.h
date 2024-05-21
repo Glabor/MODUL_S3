@@ -17,11 +17,14 @@ public:
     void pinSetup();
     bool lsmSetup();
     bool adxlSetup();
-    void saveSens(String sens);
+    void saveSens(String sens, int sensTime);
     void accBuffering(int meas);
     bool initSens(String sens);
     void getSens(String sens);
     int genVar = 5;
+    int id = 0;
+    String type = "";
+    String newName = "";
     bool bADXL = false;
     bool bSick = false;
     Adafruit_ADXL375 *adxl = nullptr;

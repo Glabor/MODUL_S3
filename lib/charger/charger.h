@@ -18,11 +18,15 @@
 class charger {
 public:
     charger(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, capteurs *c, AsyncWebServer *s, AsyncWebSocket *w, comLORA *l);
-    void routinecharge();
+    void routinecharge(void (*task)(void));
     bool initSPIFFS();
     void setup();
     void initWebSocket();
     void serverRoutes();
+    bool wifiConnect();
+    int sendSens(String type);
+    int httpPostRequest(String serverName, String postText);
+    String host = "http://LAPTOP-TF0BBSC1:5000";
 
 private:
     pinout *pins;
@@ -36,10 +40,8 @@ private:
     void syncRTC();
     String printLocalTime();
     String processor(const String &var);
-    int httpPostRequest(String serverName, String postText);
     int sendFlask();
     bool manageCOM();
-    bool wifiConnect();
     void loopWS();
     int manageLoop();
     void normalTask();
@@ -55,7 +57,6 @@ private:
     const long gmtOffset_sec = 0;
     const int daylightOffset_sec = 0;
 
-    int id = 0;
     int blink = 0;
     int printInt = 0;
     bool bLSM = false;

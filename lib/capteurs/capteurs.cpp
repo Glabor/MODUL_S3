@@ -1,11 +1,14 @@
 #include "capteurs.h"
 
-capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr){
-    pins=p;
-    rtc=r;
-    fs=&f;
-    preferences=pr;
-    adxl=new Adafruit_ADXL375(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI, pins->ADXL375_CS, 12345);
+capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr) {
+    pins = p;
+    rtc = r;
+    fs = &f;
+    preferences = pr;
+    adxl = new Adafruit_ADXL375(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI, pins->ADXL375_CS, 12345);
+    preferences->begin("prefid", false);
+    id = preferences->getUInt("id", 0);
+    preferences->end();
 }
 float capteurs::measBatt() {
     float cellVolt;
@@ -100,7 +103,7 @@ void capteurs::getSens(String sens) {
     return;
 }
 
-void capteurs::saveSens(String sens) {
+void capteurs::saveSens(String sens, int sensTime) {
     if (!initSens(sens)) {
         return;
     }
@@ -109,8 +112,11 @@ void capteurs::saveSens(String sens) {
     //     return;
     // }
     // create folder for file
-    DateTime startDate = rtc->rtc.now();
-    int startTime = startDate.unixtime();
+    int startTime = 123456789;
+    if (rtc->rtcConnected) {
+        DateTime startDate = rtc->rtc.now();
+        startTime = startDate.unixtime();
+    }
     // create folder to save chunk of data
     String fileDate = String(startTime);
     String beginStr = fileDate.substring(0, 5);
@@ -131,18 +137,19 @@ void capteurs::saveSens(String sens) {
         }
     }
 
-    int accTime = genVar;
+    // int accTime = genVar;
     // String fn = "/" + sens + ".bin";
     String fn = name;
     Serial.println(fn);
     int startMillis = millis();
     File file = SD_MMC.open(fn, FILE_WRITE);
     unsigned long time0 = micros();
+    newName = fn;
 
     if (file) {
-        while ((millis() - startMillis) < accTime * 1000) {
+        while ((millis() - startMillis) < sensTime * 1000) {
             // change LED color
-            float prog = ((float)(millis() - startMillis)) / ((float)(accTime * 1000));
+            float prog = ((float)(millis() - startMillis)) / ((float)(sensTime * 1000));
             neopixelWrite(pins->LED, pins->bright * (1.0 - prog), 0, pins->bright * prog); // r->b
 
             // get data;
@@ -166,7 +173,7 @@ void capteurs::saveSens(String sens) {
     file.close();
     digitalWrite(pins->ON_SICK, bSick);
 }
-void capteurs::pinSetup(){
+void capteurs::pinSetup() {
     pinMode(pins->ADXL375_SCK, OUTPUT);
     pinMode(pins->ADXL375_MOSI, OUTPUT);
     pinMode(pins->ADXL375_MISO, INPUT_PULLDOWN);

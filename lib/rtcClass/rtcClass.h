@@ -5,8 +5,12 @@ class rtcClass {
 public:
     RTC_DS3231 rtc;
     bool chg;
+    bool rtcConnected;
     void rtcSetup() {
+        chg = false;
+        rtcConnected = false;
         if (rtc.begin()) {
+            rtcConnected = true;
             rtc.disable32K();
             rtc.writeSqwPinMode(DS3231_OFF);
             rtc.disableAlarm(2);
@@ -18,19 +22,23 @@ public:
             rtc.setAlarm1(rtc.now() + TimeSpan(1), DS3231_A1_Date);
             Serial.println("alarm setup");
         } else {
+            chg = true;
             Serial.println("Couldn't find RTC");
-            Serial.flush();
-            ESP.restart();
+            // Serial.flush();
+            // ESP.restart();
         }
         Serial.print("chg is ");
         Serial.println(chg);
     };
     void goSleep(int sleepTime) {
-        rtc.setAlarm1(rtc.now() + sleepTime, DS3231_A1_Date);
-        Serial.println("sleeping " + String(sleepTime) + "s");
-        rtc.clearAlarm(1);
-        delay(500);
-        Serial.println("Alarm cleared");
+        Serial.println("go sleeping");
+        if (rtcConnected) {
+            rtc.setAlarm1(rtc.now() + sleepTime, DS3231_A1_Date);
+            Serial.println("sleeping " + String(sleepTime) + "s");
+            rtc.clearAlarm(1);
+            delay(500);
+            Serial.println("Alarm cleared");
+        }
         ESP.restart();
     };
 };

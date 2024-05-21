@@ -1,10 +1,14 @@
 #ifndef pinout_H
 #define pinout_H
 #include <ArduinoJson.h>
+#include <SD_MMC.h>
+#include <SPI.h>
+#include <Wire.h>
+
 class pinout {
 public:
     pinout(String model) {
-        if (model == "v3") {
+        if (model == "v3.0") {
             BOOT0 = 0;
             LED = 1;
             SDA = 14;
@@ -24,6 +28,32 @@ public:
 
             ON_SICK = 13;
             SICK1 = 7;
+            RFM95_RST = 10;
+            RFM95_INT = 11;
+            RFM95_CS = 12;
+            battPin = 9;
+            ledPin = 4;
+        }
+        if (model == "v3.1") {
+            BOOT0 = 0;
+            LED = 1;
+            SDA = 14;
+            SCL = 21;
+            clk = 48;
+            cmd = 37;
+            d0 = 38;
+            d1 = 39;
+            d2 = 35;
+            d3 = 36; // GPIO 34 is not broken-out on ESP32-S3-DevKitC-1 v1.1
+
+            ADXL375_SCK = 42;
+            ADXL375_MISO = 41;
+            ADXL375_MOSI = 40;
+            ADXL375_CS = 2;
+            LORA_CS = 12;
+
+            ON_SICK = 13;
+            SICK1 = 8;
             RFM95_RST = 10;
             RFM95_INT = 11;
             RFM95_CS = 12;
@@ -96,6 +126,9 @@ public:
     };
     void pinSetup() {
         pinMode(LED, OUTPUT);
+        initBlink();
+        Wire.begin(SDA, SCL);
+        SPI.begin(ADXL375_SCK, ADXL375_MISO, ADXL375_MOSI);
     };
     void loopBlink(bool bBlink) {
         // blinking
@@ -109,9 +142,24 @@ public:
             colorB[1] = 0;
             colorB[2] = 0;
         }
-        Serial.print("blink :" );
+        Serial.print("blink :");
         Serial.println(bBlink);
         neopixelWrite(LED, colorB[0], colorB[1], colorB[2]);
     }
+
+    bool sdmmcSetup() {
+        if (!SD_MMC.setPins(clk, cmd, d0, d1, d2, d3)) {
+            Serial.println("Pin change failed!");
+            return false;
+        }
+        if (!SD_MMC.begin("/sdcard", true, false, 20000, 5)) {
+            Serial.println("Card Mount Failed");
+            neopixelWrite(LED, 0, bright, bright);
+            delay(500);
+            return false;
+        }
+        return true;
+    }
 };
+
 #endif
