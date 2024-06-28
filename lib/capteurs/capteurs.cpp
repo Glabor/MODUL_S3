@@ -362,6 +362,22 @@ void capteurs::LDC_LHRMesure( long *Max, long *Min, long *Moy,int duration){
     String endStr = fileDate.substring(5, 10);
     String sens= "LHR";
     String name = "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
+    int index = 0;
+    while (name.indexOf("/", index) >= 0)
+    {
+        int start = name.indexOf("/", index) + 1;
+        index = name.indexOf("/", index) + 1;
+        int end = name.indexOf("/", index);
+        if (end >= 0)
+        {
+            String dirCreate = SD_MMC.mkdir(name.substring(0, end)) ? "dir " + name.substring(0, end) + " created " : " dir not created ";
+            Serial.println(dirCreate);
+        }
+        else
+        {
+            Serial.println("file : /" + name.substring(start));
+        }
+    }
     File file = SD_MMC.open(name, FILE_WRITE);
     int start_time=millis();
     while(millis()<start_time+duration){
