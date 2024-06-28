@@ -1,6 +1,8 @@
 #include "comLORA.h"
-comLORA::comLORA(pinout *p) {
+
+comLORA::comLORA(pinout *p, capteurs *c) {
     pins = p;
+    cap = c;
     // rhSPI = s;
     rhSPI = new RHSoftwareSPI(RHSoftwareSPI::Frequency1MHz, RHSoftwareSPI::BitOrderMSBFirst, RHSoftwareSPI::DataMode0);
     rhSPI->setPins(pins->ADXL375_MISO, pins->ADXL375_MOSI, pins->ADXL375_SCK);
@@ -45,4 +47,80 @@ void comLORA::pinSetup() {
     pinMode(pins->RFM95_CS, OUTPUT);
     pinMode(pins->RFM95_INT, INPUT);
     pinMode(pins->RFM95_RST, OUTPUT);
+}
+
+void comLORA::rafale(byte *message, int length, int id) {
+    /*
+    for ripper, message =
+        *id ripper
+        *min
+        *max
+        *moy
+        *batt
+    add =
+        *angle
+        *turns
+    */
+    int transmilli0 = millis();
+    int transmitTime = 60;
+    int sentTime;
+
+    int prevAng;
+    int turnNumber;
+    int angle;
+    bool stopBool = false;
+    while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
+        if ((millis() - sentTime > 100)) {
+            sentTime = millis();
+            cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
+            float alpha;
+            if (cap->accel.acceleration.x != 0) {
+                alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x));
+            } else // add a small amount to zero acceleration to not divide by 0
+            {
+                alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
+            }
+            float alpha_deg = alpha * 180.0 / M_PI;
+
+            if (alpha_deg < 0.0) { // keep angles positive
+                alpha_deg += 360.0;
+            }
+            if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
+                turnNumber--;
+            }
+            if ((prevAng - alpha_deg) > 300) { // increment turn Counter
+                turnNumber++;
+            }
+            prevAng = alpha_deg;
+            angle = (int)(alpha_deg * 100);
+
+            Serial.print(angle);
+            Serial.print(",");
+            Serial.println(turnNumber);
+            message[12] = lowByte(angle);
+            message[13] = highByte(angle);
+            message[14] = lowByte(turnNumber);
+            message[15] = highByte(turnNumber);
+            rf95->send(message, 16);
+            rf95->waitPacketSent();
+        }
+        if (rf95->available())
+        // receive to check if confirmation is sent
+        {
+            Serial.println("received");
+            uint8_t buf[50];
+            uint8_t len = sizeof(buf);
+            if (rf95->recv(buf, &len)) {
+                // String recMessage = String((char *)buf);
+                int count = buf[0];
+                // int count = recMessage.toInt();
+                if ((count == id) && (len < 5)) {
+                    stopBool = true; // confirmation that base received the message, and tells to stop rafale
+                }
+                Serial.print(count);
+                Serial.print(",");
+                Serial.println(len);
+            }
+        }
+    }
 }

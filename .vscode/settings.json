@@ -15,6 +15,11 @@
         "ostream": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "esp32-hal.h": "c",
+        "soc_caps.h": "c",
+        "ledc.h": "c",
+        "stdbool.h": "c",
+        "esp32-hal-ledc.h": "c"
     }
 }
