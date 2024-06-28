@@ -63,7 +63,10 @@ public:
             ledPin = 4;
             RxPin = 18;
             TxPin = 17;
+
+            Ext_SPI_CS= 04;
         }
+        
     };
     int ledPin;
     String ledState;
@@ -94,6 +97,8 @@ public:
     int battPin;
     int RxPin; 
     int TxPin;
+
+    int Ext_SPI_CS;
 
     // Function to combine RGB components into a 32-bit color value
     uint32_t neopixelColor(uint8_t red, uint8_t green, uint8_t blue) {

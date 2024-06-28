@@ -147,6 +147,9 @@ bool capteurs::initSens(String sens) {
         HMRsetup();
         // digitalWrite(pins->ON_SICK, HIGH);
         return true;
+    } else if (sens == "LDC") {
+        LDC_LHRSetup();
+        return true;
     }
     return false;
 }
@@ -285,6 +288,91 @@ void capteurs::saveSens(String sens, int sensTime) {
     file.close();
     digitalWrite(pins->ON_SICK, bSick);
 }
+void capteurs::LDC_LHRSetup() {
+    SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
+    digitalWrite(pins->Ext_SPI_CS, LOW);
+    SPI.transfer(0x0A);
+    SPI.transfer(0x00); //  INTB_MODE
+    SPI.transfer(0x01);
+    SPI.transfer(0x75); //  RP_SET
+    SPI.transfer(0x04);
+    SPI.transfer(0x03); //  DIG_CONF
+    SPI.transfer(0x05);
+    SPI.transfer(0x01); //  ALT_CONFIG
+    SPI.transfer(0x0C);
+    SPI.transfer(0x01); //  D_CONFIG
+    SPI.transfer(0x30);
+    SPI.transfer(0xCC); //  LHR_RCOUNT_LSB sample rate LSB
+    SPI.transfer(0x31);
+    SPI.transfer(0x77); //  LHR_RCOUNT_MSB sample rate MSB
+    SPI.transfer(0x34);
+    SPI.transfer(0x00); //  LHR_CONFIG
+    SPI.transfer(0x32);
+    SPI.transfer(0x00);
+    SPI.transfer(0x33);
+    SPI.transfer(0x00);
+    SPI.transfer(0x0B);
+    SPI.transfer(0x00); //  START_CONFIG);
+    digitalWrite(pins->Ext_SPI_CS, HIGH);
+}
+void capteurs::LDC_LHRMesure(long *Max, long *Min, long *Moy, int duration) {
+    digitalWrite(pins->Ext_SPI_CS, LOW);
+    long LHR_status, LHR_LSB, LHR_MID, LHR_MSB, inductance, fsensor;
+    long sum = 0;
+    int count = 0;
+    Max = 0;
+    long test = pow(2, 24);
+    Min = &test;
+    int sens_div = 0;
+    long f = 16000000; // f from clock gen
+    byte READ = 0b10000000;
+
+    int startTime = 123456789;
+    if (rtc->rtcConnected) {
+        DateTime startDate = rtc->rtc.now();
+        startTime = startDate.unixtime();
+    }
+    String fileDate = String(startTime);
+    String beginStr = fileDate.substring(0, 5);
+    String endStr = fileDate.substring(5, 10);
+    String sens = "LHR";
+    String name = "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
+    File file = SD_MMC.open(name, FILE_WRITE);
+    int start_time = millis();
+    while (millis() < start_time + duration) {
+        SPI.transfer(0x3B | READ); // reading status
+        long LHR_status = SPI.transfer(0x00);
+        if (LHR_status == 0) {
+            // Serial.println("status loop");
+            SPI.transfer(0x38 | READ);
+            LHR_LSB = SPI.transfer(0x00);
+            SPI.transfer(0x39 | READ);
+            LHR_MID = SPI.transfer(0x00);
+            SPI.transfer(0x3A | READ);
+            LHR_MSB = SPI.transfer(0x00);
+            inductance = (LHR_MSB << 16) | (LHR_MID << 8) | LHR_LSB;
+            fsensor = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
+            if (fsensor < *Min) {
+                Min = &fsensor;
+            }
+            if (fsensor > *Max) {
+                Max = &fsensor;
+            }
+            if (sum < pow(2, 13) - fsensor) {
+                sum += fsensor;
+                count++;
+            }
+            file.write(LHR_MSB);
+            file.write(LHR_MID);
+            file.write(LHR_LSB);
+        }
+    }
+    sum = sum / count;
+    Moy = &sum;
+    digitalWrite(pins->Ext_SPI_CS, HIGH);
+    file.flush();
+    file.close();
+}
 void capteurs::pinSetup() {
     pinMode(pins->ADXL375_SCK, OUTPUT);
     pinMode(pins->ADXL375_MOSI, OUTPUT);
@@ -298,4 +386,6 @@ void capteurs::pinSetup() {
     digitalWrite(pins->RFM95_CS, HIGH);
     digitalWrite(pins->ON_SICK, bSick);
     analogReadResolution(12);
+    pinMode(pins->Ext_SPI_CS, OUTPUT);
+    digitalWrite(pins->Ext_SPI_CS, HIGH);
 }

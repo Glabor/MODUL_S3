@@ -16,6 +16,7 @@
         "tuple": "cpp",
         "type_traits": "cpp",
         "utility": "cpp",
+        "cmath": "cpp",
         "esp32-hal.h": "c",
         "soc_caps.h": "c",
         "ledc.h": "c",
