@@ -342,7 +342,7 @@ void capteurs::LDC_LHRSetup(){
 void capteurs::LDC_LHRMesure( long *Max, long *Min, long *Moy,int duration){
     digitalWrite(pins->Ext_SPI_CS, LOW);
     long LHR_status,LHR_LSB,LHR_MID,LHR_MSB,inductance,fsensor;
-    long sum=0;
+    long long sum=0;
     int count=0;
     Max=0;
     long test=pow(2,24);
@@ -399,17 +399,15 @@ void capteurs::LDC_LHRMesure( long *Max, long *Min, long *Moy,int duration){
             if(fsensor>*Max){
                 Max=&fsensor;
             }
-            if(sum<pow(2,13)-fsensor){
-                sum+=fsensor;
-                count++;
-            }
+            sum+=fsensor;
+            count++;
             file.write(LHR_MSB);
             file.write(LHR_MID);
             file.write(LHR_LSB);
         }
     }
-    sum=sum/count;
-    Moy=&sum;
+    long moy=sum/count;
+    Moy=&moy;
     digitalWrite(pins->Ext_SPI_CS, HIGH);
     file.flush();
     file.close();
