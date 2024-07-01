@@ -50,17 +50,6 @@ void comLORA::pinSetup() {
 }
 
 void comLORA::rafale(byte *message, int length, int id) {
-    /*
-    for ripper, message =
-        *id ripper
-        *min
-        *max
-        *moy
-        *batt
-    add =
-        *angle
-        *turns
-    */
     int transmilli0 = millis();
     int transmitTime = 60;
     int sentTime;
@@ -97,11 +86,11 @@ void comLORA::rafale(byte *message, int length, int id) {
             Serial.print(angle);
             Serial.print(",");
             Serial.println(turnNumber);
-            message[12] = lowByte(angle);
-            message[13] = highByte(angle);
-            message[14] = lowByte(turnNumber);
-            message[15] = highByte(turnNumber);
-            rf95->send(message, 16);
+            message[length + 0] = lowByte(angle);
+            message[length + 1] = highByte(angle);
+            message[length + 2] = lowByte(turnNumber);
+            message[length + 3] = highByte(turnNumber);
+            rf95->send(message, length + 4);
             rf95->waitPacketSent();
         }
         if (rf95->available())
