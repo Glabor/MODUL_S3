@@ -22,8 +22,9 @@ public:
     bool initSens(String sens);
     void getSens(String sens);
     void HMRsetup();
+    void Write(byte thisRegister, byte thisValue);
     void LDC_LHRSetup();
-    void LDC_LHRMesure( long *Max, long *Min, long *Moy,int duration);
+    void LDC_LHRMesure(long *Max, long *Min, long *Moy, int duration);
     int genVar = 5;
     int id = 0;
     String type = "";

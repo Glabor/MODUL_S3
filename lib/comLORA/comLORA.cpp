@@ -14,6 +14,11 @@ bool comLORA::rf95Setup(void) {
     setup rf95 module at beginning
     do only once in program since it seems to freeze if done again after
     */
+    pinMode(pins->ADXL375_SCK, OUTPUT);
+    pinMode(pins->ADXL375_MOSI, OUTPUT);
+    pinMode(pins->ADXL375_MISO, INPUT_PULLDOWN);
+
+    rhSPI->begin();
     bool rfSetup = false;
     digitalWrite(pins->ADXL375_CS, HIGH);
     digitalWrite(pins->RFM95_CS, LOW);
@@ -22,6 +27,7 @@ bool comLORA::rf95Setup(void) {
     delay(100);
     digitalWrite(pins->RFM95_RST, HIGH);
     delay(100);
+
     Serial.println("try rf init");
     if (!rf95->init()) {
         Serial.println("LoRa radio init failed");
@@ -50,14 +56,16 @@ void comLORA::pinSetup() {
 }
 
 void comLORA::rafale(byte *message, int length, int id) {
+    Serial.println("rafale");
     int transmilli0 = millis();
     int transmitTime = 60;
     int sentTime;
 
     int prevAng;
-    int turnNumber;
+    int turnNumber = 0;
     int angle;
     bool stopBool = false;
+    rf95Setup();
     while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
         if ((millis() - sentTime > 100)) {
             sentTime = millis();
@@ -92,6 +100,7 @@ void comLORA::rafale(byte *message, int length, int id) {
             message[length + 3] = highByte(turnNumber);
             rf95->send(message, length + 4);
             rf95->waitPacketSent();
+            Serial.println("sent");
         }
         if (rf95->available())
         // receive to check if confirmation is sent

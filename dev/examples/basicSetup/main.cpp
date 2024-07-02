@@ -17,7 +17,7 @@ AsyncWebSocket ws("/ws");
 pinout pins(model);
 rtcClass rtc;
 capteurs cap(&pins, &rtc, SD_MMC, &preferences);
-comLORA lora(&pins);
+comLORA lora(&pins, &cap);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
 
 void setup() {
