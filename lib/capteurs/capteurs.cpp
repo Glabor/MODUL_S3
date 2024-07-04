@@ -326,6 +326,7 @@ void capteurs::LDC_LHRSetup() {
     delay(500);
     Serial.println("setup done");
 }
+
 void capteurs::LDC_LHRMesure(long *Max, long *Min, long *Moy, int duration) {
     digitalWrite(pins->Ext_SPI_CS, LOW);
     long LHR_status, LHR_LSB, LHR_MID, LHR_MSB, inductance, fsensor;
@@ -428,6 +429,7 @@ void capteurs::LDC_LHRMesure(long *Max, long *Min, long *Moy, int duration) {
     // SPI.endTransaction();
     SPI.end();
 }
+
 void capteurs::pinSetup() {
     // pinMode(pins->ADXL375_SCK, OUTPUT);
     // pinMode(pins->ADXL375_MOSI, OUTPUT);
@@ -443,4 +445,31 @@ void capteurs::pinSetup() {
     analogReadResolution(12);
     pinMode(pins->Ext_SPI_CS, OUTPUT);
     digitalWrite(pins->Ext_SPI_CS, HIGH);
+}
+
+int capteurs::wheelRot(int sampleTime) {
+    /*return wheel rotation speedafter average of gyroscope measures*/
+    /*previous bool if wheel rotation is greater than 1 RPM */
+    int milli0 = millis();
+    lsmSetup();
+    dsox.getEvent(&accel, &gyro, &temp);
+    float wx = gyro.gyro.x;
+    float wy = gyro.gyro.y;
+    float wz = gyro.gyro.z;
+
+    int count = 1;
+    while (millis() - milli0 < sampleTime) {
+        dsox.getEvent(&accel, &gyro, &temp);
+        count++;
+        wx = (wx*(count-1) + gyro.gyro.x) / count;
+        wy = (wy*(count-1) + gyro.gyro.y) / count;
+        wz = (wz*(count-1) + gyro.gyro.z) / count;
+        // wy = (1 - 0.1) * wy + 0.1 * gyro.gyro.y;
+        // wz = (1 - 0.1) * wz + 0.1 * gyro.gyro.z;
+        // w = sqrt(sq(wy) + sq(wz)) * wz / abs(wz);
+    }
+    double w = sqrt(sq(wx) + sq(wy) + sq(wz));
+
+    int rotW = (int)abs(100 * w); // speed of wheel (100*RPM)
+    return rotW;
 }

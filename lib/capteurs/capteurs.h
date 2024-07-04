@@ -14,6 +14,7 @@ public:
     capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr);
     float measBatt();
     int battSend;
+    int wheelRot(int sampleTime);
     void pinSetup();
     bool lsmSetup();
     bool adxlSetup();
