@@ -11,6 +11,7 @@ public:
     comLORA(pinout *p, capteurs *c);
     bool rf95Setup(void);
     void pinSetup();
+    void rfSend(String message);
     void rafale(byte *mess, int length, int id);
     RH_RF95 *rf95;
 

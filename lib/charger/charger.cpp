@@ -361,7 +361,7 @@ bool charger::manageCOM() {
     bool wConnect = false;
     wConnect = wifiConnect();
     if (wConnect) {
-        int respFlask = sendFlask();
+        int respFlask = sendFlask(); // check if server running (can send to deep sleep)
         if (respFlask > 0) {
             // flask on + wifi on
             local = false;

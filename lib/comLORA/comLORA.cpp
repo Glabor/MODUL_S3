@@ -55,6 +55,19 @@ void comLORA::pinSetup() {
     pinMode(pins->RFM95_RST, OUTPUT);
 }
 
+void comLORA::rfSend(String message) {
+    String mess2Send = String(cap->id) + ",";
+    mess2Send += message;
+    // send a message using radio module
+    rf95Setup();
+    // rf95Setup();
+    int bufSize = mess2Send.length() + 1;
+    char Buf[bufSize];
+    mess2Send.toCharArray(Buf, bufSize);
+    rf95->send((uint8_t *)Buf, bufSize);
+    rf95->waitPacketSent();
+}
+
 void comLORA::rafale(byte *message, int length, int id) {
     Serial.println("rafale");
     int transmilli0 = millis();
@@ -67,41 +80,31 @@ void comLORA::rafale(byte *message, int length, int id) {
     bool stopBool = false;
     rf95Setup();
     while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
-        if ((millis() - sentTime > 100)) {
-            sentTime = millis();
-            cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
-            float alpha;
-            if (cap->accel.acceleration.x != 0) {
-                alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x));
-            } else // add a small amount to zero acceleration to not divide by 0
-            {
-                alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
-            }
-            float alpha_deg = alpha * 180.0 / M_PI;
-
-            if (alpha_deg < 0.0) { // keep angles positive
-                alpha_deg += 360.0;
-            }
-            if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
-                turnNumber--;
-            }
-            if ((prevAng - alpha_deg) > 300) { // increment turn Counter
-                turnNumber++;
-            }
-            prevAng = alpha_deg;
-            angle = (int)(alpha_deg * 100);
-
-            Serial.print(angle);
-            Serial.print(",");
-            Serial.println(turnNumber);
-            message[length + 0] = lowByte(angle);
-            message[length + 1] = highByte(angle);
-            message[length + 2] = lowByte(turnNumber);
-            message[length + 3] = highByte(turnNumber);
-            rf95->send(message, length + 4);
-            rf95->waitPacketSent();
-            Serial.println("sent");
+        cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
+        float alpha;
+        if (cap->accel.acceleration.x != 0) {
+            alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x));
+        } else // add a small amount to zero acceleration to not divide by 0
+        {
+            alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
         }
+        float alpha_deg = alpha * 180.0 / M_PI;
+
+        if (alpha_deg < 0.0) { // keep angles positive
+            alpha_deg += 360.0;
+        }
+        if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
+            turnNumber--;
+        }
+        if ((prevAng - alpha_deg) > 300) { // increment turn Counter
+            turnNumber++;
+        }
+        prevAng = alpha_deg;
+        angle = (int)(alpha_deg * 100);
+        Serial.print(angle);
+        Serial.print(",");
+        Serial.println(turnNumber);
+
         if (rf95->available())
         // receive to check if confirmation is sent
         {
@@ -119,6 +122,17 @@ void comLORA::rafale(byte *message, int length, int id) {
                 Serial.print(",");
                 Serial.println(len);
             }
+        }
+
+        if ((millis() - sentTime > 50)) {
+            int index = length;
+            message[index++] = lowByte(angle);
+            message[index++] = highByte(angle);
+            message[index++] = lowByte(turnNumber);
+            rf95->send(message, length + 3);
+            rf95->waitPacketSent();
+            Serial.println("sent");
+            sentTime = millis();
         }
     }
 }
