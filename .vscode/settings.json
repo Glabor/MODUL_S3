@@ -23,5 +23,6 @@
         "stdbool.h": "c",
         "esp32-hal-ledc.h": "c",
         "random": "cpp"
-    }
+    },
+    "liveServer.settings.port": 5501
 }

@@ -1,8 +1,14 @@
 #ifndef RTCCLASS_H
 #define RTCCLASS_H
+#include <Preferences.h>
 #include <RTClib.h>
+
 class rtcClass {
 public:
+    Preferences *preferences;
+    rtcClass(Preferences *pr) {
+        preferences = pr;
+    };
     RTC_DS3231 rtc;
     bool chg;
     bool rtcConnected;
@@ -44,11 +50,13 @@ public:
 
     void syncSleep(int sleepMode, int sysID) {
         int wake0 = 1589194800;
-        int wakeTime = wake0 + sysID * 120;
-        int sleepCyc[3] = {2000, 1, 8}; // TODO change back to { 2000, 1, 8}
+        int wakeTime = wake0 + sysID * 30;
+        int sleepCyc[3] = {2000, 1, 8};
         int sleepT = sleepCyc[sleepMode];
-
-        int block = 30; // TODO change back to 1800
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleep", 30);
+        preferences->end();
+        int block = idRead;
         int nowTime = rtc.now().unixtime();
         int timeDif = (sleepT * block) - (nowTime - wakeTime) % (sleepT * block); // time to go to next block
         rtc.setAlarm1(rtc.now() + TimeSpan(timeDif), DS3231_A1_Date);             // plan time to next block + cyc

@@ -64,3 +64,32 @@ function testGet(event) {
 //   }
 //   console.log(`after ${statusElement.textContent}`);
 // }
+
+function updateCurrentValue() {
+  var selectedVariable = document.getElementById("variableSelect").value;
+  var currentValue = document
+    .getElementById(selectedVariable)
+    .getAttribute("data-value");
+  document.getElementById("currentValue").value = currentValue;
+}
+
+function updateVariable() {
+  var selectedVariable = document.getElementById("variableSelect").value;
+  var newValue = document.getElementById("newValue").value;
+  if (newValue.trim() !== "") {
+    document
+      .getElementById(selectedVariable)
+      .setAttribute("data-value", newValue);
+    updateCurrentValue();
+    document.getElementById("newValue").value = "";
+    var obj = {};
+    obj[selectedVariable] = newValue;
+    console.log(`${JSON.stringify(obj)}`);
+    websocket.send(JSON.stringify(obj));
+  } else {
+    alert("Please enter a new value.");
+  }
+}
+
+// Initialize the current value display
+updateCurrentValue();
