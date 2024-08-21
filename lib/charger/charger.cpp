@@ -405,7 +405,7 @@ bool charger::wifiConnect() {
             }
         }
     }
-    WiFi.softAP(soft_ap_ssid, soft_ap_password);
+    WiFi.softAP(soft_ap_ssid, "password");
 
     if (!MDNS.begin("esp32")) {
         Serial.println("Error setting up MDNS responder!");
