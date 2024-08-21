@@ -461,9 +461,9 @@ int capteurs::wheelRot(int sampleTime) {
     while (millis() - milli0 < sampleTime) {
         dsox.getEvent(&accel, &gyro, &temp);
         count++;
-        wx = (wx*(count-1) + gyro.gyro.x) / count;
-        wy = (wy*(count-1) + gyro.gyro.y) / count;
-        wz = (wz*(count-1) + gyro.gyro.z) / count;
+        wx = (wx * (count - 1) + gyro.gyro.x) / count;
+        wy = (wy * (count - 1) + gyro.gyro.y) / count;
+        wz = (wz * (count - 1) + gyro.gyro.z) / count;
         // wy = (1 - 0.1) * wy + 0.1 * gyro.gyro.y;
         // wz = (1 - 0.1) * wz + 0.1 * gyro.gyro.z;
         // w = sqrt(sq(wy) + sq(wz)) * wz / abs(wz);
