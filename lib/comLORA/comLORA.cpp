@@ -79,20 +79,18 @@ void comLORA::rafale(byte *message, int length, int id) {
     int angle;
     bool stopBool = false;
     rf95Setup();
+    cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
+    cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z,micros());
+
     while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
-        float alpha;
-        if (cap->accel.acceleration.x != 0) {
+        /*if (cap->accel.acceleration.x != 0) {
             alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x));
         } else // add a small amount to zero acceleration to not divide by 0
         {
             alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
-        }
-        float alpha_deg = alpha * 180.0 / M_PI;
-
-        if (alpha_deg < 0.0) { // keep angles positive
-            alpha_deg += 360.0;
-        }
+        }*/
+        float alpha_deg =cap->rot->correctionangle(0.1,cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z,micros());
         if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
             turnNumber--;
         }
