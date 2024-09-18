@@ -142,6 +142,20 @@ String charger::processor(const String &var) {
 
         return (String(idRead));
     }
+    if (var == "RADIUS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("radius", 0);
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "TOOLNUM") {
+        preferences->begin("prefid", false);
+        String preftoolNum = preferences->getString("toolNum", ssid);
+        preferences->end();
+
+        return (String(preftoolNum));
+    }
     if (var == "SSID") {
         preferences->begin("prefid", false);
         String prefSSID = preferences->getString("SSID", ssid);
@@ -492,6 +506,24 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
 
                 preferences->begin("prefid", false);
                 preferences->putUInt("sleep", sleep);
+                preferences->end();
+            }
+            if (myObject.containsKey("radius")) {
+                prints["print"] = String((const char *)myObject["radius"]).toInt();
+
+                int radius = String((const char *)myObject["radius"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("radius", radius);
+                preferences->end();
+            }
+            if (myObject.containsKey("toolNum")) {
+                prints["print"] = String((const char *)myObject["toolNum"]);
+
+                String toolNum = (const char *)myObject["toolNum"];
+
+                preferences->begin("prefid", false);
+                preferences->putString("toolNum", toolNum);
                 preferences->end();
             }
             if (myObject.containsKey("ssid")) {

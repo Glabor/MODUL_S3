@@ -19,6 +19,8 @@
           >
             <option value="id">ID</option>
             <option value="sleep">Sleep time</option>
+            <option value="radius">Tool radius</option>
+            <option value="toolNum">Tool number</option>
             <option value="ssid">Wifi SSID</option>
             <option value="pwd">Wifi password</option>
             <option value="host">Host address</option>
@@ -48,6 +50,8 @@
     <div id="ssid" data-value="%SSID%" style="display: none"></div>
     <div id="pwd" data-value="%PWD%" style="display: none"></div>
     <div id="host" data-value="%HOST%" style="display: none"></div>
+    <div id="radius" data-value="%RADIUS%" style="display: none"></div>
+    <div id="toolNum" data-value="%TOOLNUM%" style="display: none"></div>
 
     <!-- <p>
       <span
@@ -175,6 +179,16 @@
         </button>
       </span>
       <span id="sick" class="output">_____</span>
+    </p>
+    <p>
+      LDC sensor :
+      <span class="obj">
+        <button class="button sick" onclick="websocket.send('ldc')">LDC</button>
+        <button class="button sick" onclick="websocket.send('s_ldc')">
+          SAVE
+        </button>
+      </span>
+      <span id="ldc" class="output">_____</span>
     </p>
 
     <p>general monitor : <span id="print" class="output">_____</span></p>
