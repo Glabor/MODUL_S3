@@ -1,13 +1,13 @@
 #include "capteurs.h"
 
-capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr,String modele) {
-    rot=new angle(&dsox,modele);
+capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, String modele) {
+    rot = new angle(&dsox, modele);
     pins = p;
-    if(pins->LHR_CS_1>=0){
-        ldc1=new LDC(pins);
+    if (pins->LHR_CS_1 >= 0) {
+        ldc1 = new LDC(pins);
     }
-    if(pins->LHR_CS_2>=0){
-        ldc2=new LDC(pins);
+    if (pins->LHR_CS_2 >= 0) {
+        ldc2 = new LDC(pins);
     }
     rtc = r;
     fs = &f;
@@ -141,8 +141,7 @@ void capteurs::HMRsetup() {
     Serial.println("HMR setup done");
 }
 
-void capteurs::mesurePicot(long senstime)
-{   
+void capteurs::mesurePicot(long senstime) {
     if (!initSens("lsm")) {
         return;
     }
@@ -150,15 +149,17 @@ void capteurs::mesurePicot(long senstime)
         return;
     }
     digitalWrite(pins->ON_SICK, HIGH);
-    w0=rot->wheelRot2();
+    w0 = rot->wheelRot2();
     String fn = getName("picot");
     newName = fn;
     File file = SD_MMC.open(fn, FILE_WRITE);
-    unsigned long t0=millis();
+    unsigned long t0 = millis();
     unsigned long time0 = micros();
     unsigned long ta_micro;
-    if (!file){return;}
-    while(millis() <t0+senstime * 1000){
+    if (!file) {
+        return;
+    }
+    while (millis() < t0 + senstime * 1000) {
         ta_micro = micros() - time0;
         for (size_t j = 0; j < 4; j++) {
             sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
@@ -168,7 +169,8 @@ void capteurs::mesurePicot(long senstime)
         for (int j = 0; j < r; j++) {
             file.write(sdBuf[j]);
         }
-        for (int i=0;i<100;i++){
+        r = 0;
+        for (int i = 0; i < 100; i++) {
             ta_micro = micros() - time0;
             for (size_t j = 0; j < 4; j++) {
                 sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
@@ -178,6 +180,7 @@ void capteurs::mesurePicot(long senstime)
             for (int j = 0; j < r; j++) {
                 file.write(sdBuf[j]);
             }
+            r = 0;
         }
     }
     file.flush();
@@ -185,8 +188,7 @@ void capteurs::mesurePicot(long senstime)
     digitalWrite(pins->ON_SICK, LOW);
 }
 
-void capteurs::mesureRipper(long senstime, String sens)
-{
+void capteurs::mesureRipper(long senstime, String sens) {
     if (!initSens(sens)) {
         return;
     }
@@ -196,43 +198,45 @@ void capteurs::mesureRipper(long senstime, String sens)
     File file = SD_MMC.open(fn, FILE_WRITE);
     unsigned long time0 = micros();
     newName = fn;
-    if (!file){return;}
-    unsigned long t0=millis();
+    if (!file) {
+        return;
+    }
+    unsigned long t0 = millis();
     unsigned long ta_micro;
-    while(millis() <t0+senstime * 1000){
+    while (millis() < t0 + senstime * 1000) {
         ta_micro = micros() - time0;
         for (size_t j = 0; j < 4; j++) {
             sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
             r++;
         }
-        if(sens=="LDC1"){
-            ldc1->mesure2f(pins->LHR_CS_1,pins->LHR_SWITCH_1);
-            sdBuf[r]=ldc1->LHR_MSB1;
+        if (sens == "LDC1") {
+            ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
+            sdBuf[r] = ldc1->LHR_MSB1;
             r++;
-            sdBuf[r]=ldc1->LHR_MID1;
+            sdBuf[r] = ldc1->LHR_MID1;
             r++;
-            sdBuf[r]=ldc1->LHR_LSB1;
+            sdBuf[r] = ldc1->LHR_LSB1;
             r++;
-            sdBuf[r]=ldc1->LHR_MSB2;
+            sdBuf[r] = ldc1->LHR_MSB2;
             r++;
-            sdBuf[r]=ldc1->LHR_MID2;
+            sdBuf[r] = ldc1->LHR_MID2;
             r++;
-            sdBuf[r]=ldc1->LHR_LSB2;
+            sdBuf[r] = ldc1->LHR_LSB2;
             r++;
         }
-        if(sens=="LDC2"){
-            ldc2->mesure2f(pins->LHR_CS_2,pins->LHR_SWITCH_2);
-            sdBuf[r]=ldc2->LHR_MSB1;
+        if (sens == "LDC2") {
+            ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2);
+            sdBuf[r] = ldc2->LHR_MSB1;
             r++;
-            sdBuf[r]=ldc2->LHR_MID1;
+            sdBuf[r] = ldc2->LHR_MID1;
             r++;
-            sdBuf[r]=ldc2->LHR_LSB1;
+            sdBuf[r] = ldc2->LHR_LSB1;
             r++;
-            sdBuf[r]=ldc2->LHR_MSB2;
+            sdBuf[r] = ldc2->LHR_MSB2;
             r++;
-            sdBuf[r]=ldc2->LHR_MID2;
+            sdBuf[r] = ldc2->LHR_MID2;
             r++;
-            sdBuf[r]=ldc2->LHR_LSB2;
+            sdBuf[r] = ldc2->LHR_LSB2;
             r++;
         }
     }
@@ -253,16 +257,14 @@ bool capteurs::initSens(String sens) {
         HMRsetup();
         // digitalWrite(pins->ON_SICK, HIGH);
         return true;
-    } 
-    else if (sens == "LDC1") {
-        if(pins->LHR_CS_2<0){
+    } else if (sens == "LDC1") {
+        if (pins->LHR_CS_2 < 0) {
             return false;
         }
         ldc1->LHRSetup();
         return true;
-    }
-    else if (sens == "LDC2") {
-        if(pins->LHR_CS_2<0){
+    } else if (sens == "LDC2") {
+        if (pins->LHR_CS_2 < 0) {
             return false;
         }
         ldc2->LHRSetup();
@@ -326,32 +328,29 @@ void capteurs::getSens(String sens) {
         }
         Serial.println();
         // digitalWrite(pins->ON_SICK, bSick);
-    }
-    else if (sens=="angle"){
+    } else if (sens == "angle") {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
-        rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, accel.gyro.x, accel.gyro.y, accel.gyro.z,micros());
+        rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, accel.gyro.x, accel.gyro.y, accel.gyro.z, micros());
         accBuffering((int)rot->anglef);
-    }
-    else if(sens=="LDC1"){
-        if(pins->LHR_CS_1<0){
+    } else if (sens == "LDC1") {
+        if (pins->LHR_CS_1 < 0) {
             return;
         }
-        ldc1->mesure2f(pins->LHR_CS_1,pins->LHR_SWITCH_1);
-        accBuffering((int)ldc1->f1/1000);
-        accBuffering((int)ldc1->f2/1000);
-    }
-    else if(sens=="LDC2"){
-        if(pins->LHR_CS_2<0){
+        ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
+        accBuffering((int)ldc1->f1 / 1000);
+        accBuffering((int)ldc1->f2 / 1000);
+    } else if (sens == "LDC2") {
+        if (pins->LHR_CS_2 < 0) {
             return;
         }
-        ldc2->mesure2f(pins->LHR_CS_2,pins->LHR_SWITCH_2);
-        accBuffering((int)ldc2->f1/1000);
-        accBuffering((int)ldc2->f2/1000);
+        ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2);
+        accBuffering((int)ldc2->f1 / 1000);
+        accBuffering((int)ldc2->f2 / 1000);
     }
     return;
 }
-String capteurs::getName(String sens){
+String capteurs::getName(String sens) {
     int startTime = 123456789;
     if (rtc->rtcConnected) {
         DateTime startDate = rtc->rtc.now();
@@ -432,13 +431,13 @@ void capteurs::pinSetup() {
     digitalWrite(pins->RFM95_CS, HIGH);
     digitalWrite(pins->ON_SICK, bSick);
     analogReadResolution(12);
-    if(pins->LHR_CS_1>=0){
+    if (pins->LHR_CS_1 >= 0) {
         pinMode(pins->LHR_CS_1, OUTPUT);
         digitalWrite(pins->LHR_CS_1, HIGH);
         pinMode(pins->LHR_SWITCH_1, OUTPUT);
         digitalWrite(pins->LHR_SWITCH_1, LOW);
     }
-    if(pins->LHR_CS_2>=0){
+    if (pins->LHR_CS_2 >= 0) {
         pinMode(pins->LHR_CS_2, OUTPUT);
         digitalWrite(pins->LHR_CS_2, HIGH);
         pinMode(pins->LHR_SWITCH_2, OUTPUT);

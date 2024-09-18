@@ -463,6 +463,14 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             Serial.println("sick");
         } else if (message == "wifi") {
             Serial.println("wifi");
+        } else if (message == "angle") {
+            bAng = !bAng;
+            printInt = 0;
+        } else if (message == "ldc") {
+            bLDC = !bLDC;
+            printInt = 0;
+        } else if (message == "s_ldc") {
+            bS_LDC = true;
         } else if (message == "lsm") {
             bLSM = !bLSM;
             printInt = 0;
@@ -587,6 +595,26 @@ void charger::loopWS() {
         Serial.println(sickMeas);
         prints["sick"] = String(sickMeas);
     }
+    if (bAng) {
+        sensors_event_t event;
+        cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
+        cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z, micros());
+        //Serial.println(String((int)cap->rot->anglef));
+        prints["angle"] = String((int)cap->rot->anglef);
+    }
+    if (bLDC) {
+        if (pins->LHR_CS_1 < 0) {
+            return;
+        }
+        cap->ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
+        prints["ldc"] = String((int)cap->ldc1->f1 / 1000) + ',' +
+                        String((int)cap->ldc1->f2 / 1000);
+    }
+    if (bS_LDC) {
+        cap->saveSens("LDC1", cap->genVar);
+        bS_LDC = false;
+        neopixelWrite(pins->LED, pins->bright, pins->bright / 2, 0); // Orange
+    }
     if (bLSM) {
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
         prints["lsm"] = String(cap->accel.acceleration.x) + ',' +
@@ -629,7 +657,7 @@ void charger::loopWS() {
         Serial.println("boot0");
     }
 
-    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick) {
+    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC) {
         String stringPrints;
         serializeJson(prints, stringPrints);
         ws->textAll(stringPrints);

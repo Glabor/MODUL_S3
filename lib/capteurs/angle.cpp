@@ -24,13 +24,16 @@ void angle::initangle(float ax,float ay,float az,float gx,float gy,float gz,unsi
     kalman_q = 1.5;  //bruit gyro
     kalman_r = 300;  //bruit accelero
     acfx = ax;
-    acfy = ay * sqrt(ay + az) / abs(ay);
+    acfy = ay * sqrt(ay*ay+az * az) / abs(ay);
     wy =gy;
     wz = gz;
     w = sqrt(wy*wy + wz*wz) * wz / abs(wz);
     tangle0 = time;
     t = tangle0;
     anglef = atan2(-acfy, acfx) * 180 / M_PI;
+    Serial.print(String(acfy)+",");
+    Serial.print(String(acfx)+",");
+    Serial.println(anglef);
     if (anglef < 0.0) {  // keep angles positive
         anglef += 360.0;
     }

@@ -61,6 +61,9 @@ private:
     int printInt = 0;
     bool bLSM = false;
     bool bS_LSM = false;
+    bool bAng = false;
+    bool bLDC = false;
+    bool bS_LDC = false;
     bool bS_ADXL = false;
     bool bS_SICK = false;
     bool bLora = false;

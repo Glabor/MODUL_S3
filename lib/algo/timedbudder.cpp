@@ -17,11 +17,11 @@ void timedbuffer::init(float plage, float p) {
             }
         }
     }
-    choleskyN((float*)&A, (float*)&AM, 5);
+    choleskyN((float *)&A, (float *)&AM, 5);
 }
 float timedbuffer::convk(int k, int p, int i) {
     if (i == 0) {
-        return 1 ;
+        return 1;
     }
     if (i == 1) {
         return float(k) / float(p);
@@ -35,22 +35,22 @@ float timedbuffer::convk(int k, int p, int i) {
     if (i == 4) {
         return sin(float(k) / float(p) * M_PI);
     }
+    return 0;
 }
 void timedbuffer::decaleFilt(float V) {
     float vF = 0;
     if (countFilt < 2 * demiplage + 1) {
         for (int i = 0; i < 5; i++) {
-            Cstack[i] += convk(countFilt - demiplage, demiplage, i)*V;
+            Cstack[i] += convk(countFilt - demiplage, demiplage, i) * V;
         }
         countFilt++;
-    }
-    else {
-        
+    } else {
+
         float Vold = vstack[debutFilt];
         float dp = float(demiplage);
         float c0old = Cstack[0];
         Cstack[0] += (V - Vold);
-        Cstack[1] += V / dp * (dp + 1.0) + Vold-Cstack[0] / dp;
+        Cstack[1] += V / dp * (dp + 1.0) + Vold - Cstack[0] / dp;
         Cstack[2] += V / dp / dp * (dp + 1.0) * (dp + 1.0) - Vold - 2 * Cstack[1] / dp - Cstack[0] / dp / dp;
         float cc = cos(M_PI / dp) * (Cstack[3] + c0old - V * cos(M_PI / dp) + Vold) + sin(M_PI / dp) * (Cstack[4] - sin(M_PI / dp) * V);
         float ss = cos(M_PI / dp) * (Cstack[4] - V * sin(M_PI / dp)) - sin(M_PI / dp) * (Cstack[3] + c0old - cos(M_PI / dp) * V + Vold);
@@ -60,34 +60,33 @@ void timedbuffer::decaleFilt(float V) {
             CPstack[i] += convk(CPind - demiplage, demiplage, i) * V;
         }
         CPind++;
-        if (CPind == 2 * demiplage+1) {
+        if (CPind == 2 * demiplage + 1) {
             CPind = 0;
             for (int i = 0; i < 5; i++) {
                 Cstack[i] = CPstack[i];
-                CPstack[i]=0;
+                CPstack[i] = 0;
             }
         }
-        
+
         vF = AM[0] * Cstack[0] + AM[1] * Cstack[1] + AM[2] * Cstack[2] + AM[3] * Cstack[3] + AM[4] * Cstack[4];
         finF = (finF + 1) % buffsize;
         if (countF < 2 * demiplage + 1) {
             countF++;
             milieuF = std::min(demiplage, countF);
-        }
-        else {
+        } else {
             debutF = (debutF + 1) % buffsize;
             milieuF = (milieuF + 1) % buffsize;
         }
-        //vFstack[finF] = Cstack[3] /(2*dp+1);
+        // vFstack[finF] = Cstack[3] /(2*dp+1);
         debutFilt = (debutFilt + 1) % buffsize;
         vFstack[finF] = vF;
         tFstack[finF] = tstack[(debutFilt + demiplage) % buffsize];
-        //unsigned long ttt= tstack[(debutFilt + demiplage) % buffsize];
-        //ttt = 0;
+        // unsigned long ttt= tstack[(debutFilt + demiplage) % buffsize];
+        // ttt = 0;
     }
 }
 void timedbuffer::appendFilt(int V, unsigned long t, unsigned long tmin) {
-    if (count >= 2 * demiplage+1) {
+    if (count >= 2 * demiplage + 1) {
         clear(tmin, 2 * demiplage);
         unsigned long Tf = tstack[fin];
         int N = 2 * demiplage + 1 - count;
@@ -95,13 +94,12 @@ void timedbuffer::appendFilt(int V, unsigned long t, unsigned long tmin) {
         for (int i = 1; i <= N; i++) {
             float vflot = float(Vf) + float(i) / float(N) * (float(V) - float(Vf));
             double tflot = double(Tf) + double(i) / double(N) * double(t - Tf);
-            append((int)vflot, (unsigned long) tflot);
-            //append(1000, Tf + i / N * (t - Tf));
+            append((int)vflot, (unsigned long)tflot);
+            // append(1000, Tf + i / N * (t - Tf));
         }
-    }
-    else {
+    } else {
         append(V, t);
-        //vstack[0] = 1000;
+        // vstack[0] = 1000;
         /*fin = (fin + 1) % buffsize;
         vstack[fin] = V;
         tstack[fin] = t;
@@ -117,8 +115,8 @@ void timedbuffer::append(int V, unsigned long t) {
         decaleFilt(float(V));
     }
 }
-void timedbuffer::clear(unsigned long tmin,int countmax) {
-    while (count>countmax||(count > 0 && tstack[debut] < tmin)) {
+void timedbuffer::clear(unsigned long tmin, int countmax) {
+    while (count > countmax || (count > 0 && tstack[debut] < tmin)) {
         count--;
         debut = (debut + 1) % buffsize;
     }
@@ -176,7 +174,7 @@ bool timedbuffer::update() {
             return true;
         }
         if (picMax || picMin) {
-            if (vPic >0&& MaxF - MinF < seuilPics) {
+            if (vPic > 0 && MaxF - MinF < seuilPics) {
                 return false;
             }
             vPic = vFstack[milieuF];
@@ -188,13 +186,12 @@ bool timedbuffer::update() {
     }
     return false;
 }
-bool timedbuffer::getVF(float* V, unsigned long* t) {
-    
-    if (countF >0) {
+bool timedbuffer::getVF(float *V, unsigned long *t) {
+
+    if (countF > 0) {
         *V = vFstack[finF];
         *t = tFstack[finF];
         return true;
     }
     return false;
 }
-
