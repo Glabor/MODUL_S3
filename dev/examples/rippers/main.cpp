@@ -45,27 +45,49 @@ int ind;
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
 #define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
 void mainRipper() {
-    // init LDC
-    // mesure LDC
-    // mettre resultats dans message
-    // rafale message
+    int id=preferences.getUInt("id",-1);
+    if(id==-1){
+        return;
+    }
+    bool waitingtrans = preferences.getBool("WAITINGTRANS",false);//pas de mesure en attente de transmission
+    float w=cap.rot->wheelRot2();
+    if(w<0.1*2*M_PI/60){//rotation <0.1rpm
+        if(waitingtrans){
+            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("TRANSTIME",0));
+        }
+        else{
+            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("MEASTIME",0));
+        }
+    }
     pins.all_CS_high();
-    neopixelWrite(pins.LED, 0, 12, 0);
-    int batt = cap.measBatt() * 100;
-    cap.mesureRipper(10,"LDC1");
-    int id = 12;
-    add2byte(id);
-    add3byte(cap.ldc1->f1Max);
-    add3byte(cap.ldc1->f1Min);
-    add3byte(cap.ldc1->f1moy);
-    add3byte(cap.ldc1->f2Max);
-    add3byte(cap.ldc1->f2Min);
-    add3byte(cap.ldc1->f2moy);
-    add2byte(batt);
-    lora.rafale(message, 14, id);
-    rtc.goSleep(20);
+    if(waitingtrans){
+        int batt = cap.measBatt() * 100;
+        neopixelWrite(pins.LED, 0, 12, 0);
+        add2byte(id);
+        add3byte(preferences.getLong("f1Max",0));
+        add3byte(preferences.getLong("f1Min",0));
+        add3byte(preferences.getLong("f1moy",0));
+        add3byte(preferences.getLong("f2Max",0));
+        add3byte(preferences.getLong("f2Min",0));
+        add3byte(preferences.getLong("f2moy",0));
+        add2byte(batt);
+        lora.rafale(message, 14, id);
+        preferences.putBool("waitingtrans",false);
+        rtc.goSleep2(preferences.getUInt("SLEEPMEAS",10000),preferences.getUInt("MEASTIME",0));
+    }
+    else{
+        neopixelWrite(pins.LED, 0, 0, 12);
+        cap.mesureRipper(10,"LDC1");
+        preferences.putLong("f1Max",cap.ldc1->f1Max);
+        preferences.putLong("f1Min",cap.ldc1->f1Min);
+        preferences.putLong("f1moy",cap.ldc1->f1moy);
+        preferences.putLong("f2Max",cap.ldc1->f2Max);
+        preferences.putLong("f2Min",cap.ldc1->f2Min);
+        preferences.putLong("f2moy",cap.ldc1->f2moy);
+        preferences.putBool("waitingtrans",true);
+        rtc.goSleep2(0,preferences.getUInt("TRANSTIME",0));
+    }
 }
-
 void loop() {
     // LDCTest();
     charge.routinecharge(&mainRipper);

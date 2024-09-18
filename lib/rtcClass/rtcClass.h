@@ -36,6 +36,27 @@ public:
         Serial.print("chg is ");
         Serial.println(chg);
     };
+    void goSleep2(int sleeptime,int minute){
+        DateTime d0=rtc.now()+TimeSpan(sleeptime);
+        DateTime d1=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute, 0);
+        if(d0.minute()>minute){
+            if(d0.minute()-minute>30){
+                d1=d1+TimeSpan(3600);
+            }
+        }
+        else{
+            if(minute-d0.minute()>30){
+                d1=d1-TimeSpan(3600);
+            }
+        }
+        while(d1<d0){
+            d1=d1+TimeSpan(3600);
+        }
+        rtc.setAlarm1(d1, DS3231_A1_Date);
+        rtc.clearAlarm(1);
+        delay(500);
+        ESP.restart();
+    }
     void goSleep(int sleepTime) {
         Serial.println("go sleeping");
         if (rtcConnected) {
