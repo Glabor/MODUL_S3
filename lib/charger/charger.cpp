@@ -149,6 +149,34 @@ String charger::processor(const String &var) {
 
         return (String(idRead));
     }
+    if (var == "SLEEPMEAS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleepMeas", 0); // sleep after measuring
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "SLEEPNOMEAS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleepNoMeas", 0); // sleep after not measuring
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "MEASTIME") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("measTime", 0); // minute of the hour to wake up
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "TRANSTIME") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("transTime", 0); // minute of the hour to transmit
+        preferences->end();
+
+        return (String(idRead));
+    }
     if (var == "TOOLNUM") {
         preferences->begin("prefid", false);
         String preftoolNum = preferences->getString("toolNum", ssid);
@@ -525,6 +553,42 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 preferences->putUInt("radius", radius);
                 preferences->end();
             }
+            if (myObject.containsKey("sleepMeas")) {
+                prints["print"] = String((const char *)myObject["sleepMeas"]).toInt();
+
+                int sleepMeas = String((const char *)myObject["sleepMeas"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("sleepMeas", sleepMeas);
+                preferences->end();
+            }
+            if (myObject.containsKey("sleepNoMeas")) {
+                prints["print"] = String((const char *)myObject["sleepNoMeas"]).toInt();
+
+                int sleepNoMeas = String((const char *)myObject["sleepNoMeas"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("sleepNoMeas", sleepNoMeas);
+                preferences->end();
+            }
+            if (myObject.containsKey("measTime")) {
+                prints["print"] = String((const char *)myObject["measTime"]).toInt();
+
+                int measTime = String((const char *)myObject["measTime"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("measTime", measTime);
+                preferences->end();
+            }
+            if (myObject.containsKey("transTime")) {
+                prints["print"] = String((const char *)myObject["transTime"]).toInt();
+
+                int transTime = String((const char *)myObject["transTime"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("transTime", transTime);
+                preferences->end();
+            }
             if (myObject.containsKey("toolNum")) {
                 prints["print"] = String((const char *)myObject["toolNum"]);
 
@@ -599,7 +663,7 @@ void charger::loopWS() {
         sensors_event_t event;
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
         cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z, micros());
-        //Serial.println(String((int)cap->rot->anglef));
+        // Serial.println(String((int)cap->rot->anglef));
         prints["angle"] = String((int)cap->rot->anglef);
     }
     if (bLDC) {
