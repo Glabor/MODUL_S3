@@ -7,10 +7,10 @@
 #include "comLORA.h"
 #include "pinout.h"
 #include "rtcClass.h"
-
+#include "algo.h"
 String cardModel = "v3.1";
-String breakout = "ripperv1";
-String etrierModel="ripperL17";
+String breakout = "";
+String etrierModel="etrier17";
 Preferences preferences;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -20,7 +20,7 @@ rtcClass rtc(&preferences);
 capteurs cap(&pins, &rtc, SD_MMC, &preferences,etrierModel);
 comLORA lora(&pins, &cap);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
-
+algo alg;
 void setup() {
     Serial.begin(115200);
     Serial.println("begin");
@@ -39,34 +39,46 @@ void setup() {
     charge.setup();
     cap.measBatt();
 }
+
 byte message[100];
 int ind;
 #define addbyte(val){ message[ind]=val; ind++;}
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
-#define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
-void mainRipper() {
-    // init LDC
-    // mesure LDC
+void mainPicot() {
+    // init lsm
+    // init sick
+    // mesure 
     // mettre resultats dans message
     // rafale message
+    cap.initSens("lsm");
+    cap.initSens("sick");
+    cap.mesurePicot(60);
+    alg.runFromFile(cap.wf,228.6,4500,cap.newName);
     pins.all_CS_high();
     neopixelWrite(pins.LED, 0, 12, 0);
     int batt = cap.measBatt() * 100;
-    cap.mesureRipper(10,"LDC1");
+    ind=0;
     int id = 12;
     add2byte(id);
-    add3byte(cap.ldc1->f1Max);
-    add3byte(cap.ldc1->f1Min);
-    add3byte(cap.ldc1->f1moy);
-    add3byte(cap.ldc1->f2Max);
-    add3byte(cap.ldc1->f2Min);
-    add3byte(cap.ldc1->f2moy);
+    add2byte(alg.usureMu);
+    add2byte(alg.usuremu);
+    add2byte((int)alg.usuremoyu);
+    add2byte(alg.usureMd);
+    add2byte(alg.usuremd);
+    add2byte((int)alg.usuremoyd);
+    addbyte( (byte) alg.pat1f*100);
+    addbyte( (byte) alg.nPic);
+    addbyte( (byte) alg.mincor);
+    add2byte( lowByte((int)alg.minsum));
     add2byte(batt);
-    lora.rafale(message, 14, id);
+    for(int i=0;i<45;i++){
+        add2byte(alg.probfilb[i]);
+    }
+    lora.rafale(message, ind, id);
     rtc.goSleep(20);
 }
 
 void loop() {
     // LDCTest();
-    charge.routinecharge(&mainRipper);
+    charge.routinecharge(&mainPicot);
 }
