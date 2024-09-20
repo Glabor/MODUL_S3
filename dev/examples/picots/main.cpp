@@ -81,7 +81,7 @@ void mainPicot() {
         add2byte( lowByte((int)alg.minsum));
         add2byte(batt);
         for(int i=0;i<45;i++){
-            add2byte(alg.probfilb[i]);
+            addbyte(alg.probfilb[i]);
         }
         lora.rafale(message, ind, id);
         preferences.putBool("waitingtrans",false);
