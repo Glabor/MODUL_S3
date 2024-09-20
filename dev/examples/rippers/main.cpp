@@ -53,11 +53,12 @@ void mainRipper() {
     float w=cap.rot->wheelRot2();
     if(w<0.1*2*M_PI/60){//rotation <0.1rpm
         if(waitingtrans){
-            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("TRANSTIME",0));
+            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("transTime",0));
         }
         else{
-            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("MEASTIME",0));
+            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("measTime",0));
         }
+        lora.rfSend("sleeping");
     }
     pins.all_CS_high();
     if(waitingtrans){
@@ -73,7 +74,7 @@ void mainRipper() {
         add2byte(batt);
         lora.rafale(message, 14, id);
         preferences.putBool("waitingtrans",false);
-        rtc.goSleep2(preferences.getUInt("SLEEPMEAS",10000),preferences.getUInt("MEASTIME",0));
+        rtc.goSleep2(preferences.getUInt("sleepMeas",10000),preferences.getUInt("measTime",0));
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
@@ -85,7 +86,7 @@ void mainRipper() {
         preferences.putLong("f2Min",cap.ldc1->f2Min);
         preferences.putLong("f2moy",cap.ldc1->f2moy);
         preferences.putBool("waitingtrans",true);
-        rtc.goSleep2(0,preferences.getUInt("TRANSTIME",0));
+        rtc.goSleep2(0,preferences.getUInt("transTime",0));
     }
 }
 void loop() {

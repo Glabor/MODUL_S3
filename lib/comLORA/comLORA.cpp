@@ -56,7 +56,7 @@ void comLORA::pinSetup() {
 }
 
 void comLORA::rfSend(String message) {
-    String mess2Send = String(cap->id) + ",";
+    String mess2Send = "T"+String(cap->id) + ",";//message texte
     mess2Send += message;
     // send a message using radio module
     rf95Setup();
@@ -124,10 +124,11 @@ void comLORA::rafale(byte *message, int length, int id) {
 
         if ((millis() - sentTime > 50)) {
             int index = length;
+            message[index++] = 52; //"R"
             message[index++] = lowByte(angle);
             message[index++] = highByte(angle);
             message[index++] = lowByte(turnNumber);
-            rf95->send(message, length + 3);
+            rf95->send(message, length + 4);
             rf95->waitPacketSent();
             Serial.println("sent");
             sentTime = millis();

@@ -45,6 +45,7 @@ int ind;
 #define addbyte(val){ message[ind]=val; ind++;}
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
 void mainPicot() {
+    preferences.begin("prefid", false);
     int id=preferences.getUInt("id",-1);
     if(id==-1){
         return;
@@ -53,15 +54,16 @@ void mainPicot() {
     float w=cap.rot->wheelRot2();
     if(w<0.1*2*M_PI/60){//rotation <0.1rpm
         if(waitingtrans){
-            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("TRANSTIME",0));
+            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("transTime",0));
         }
         else{
-            rtc.goSleep2(preferences.getUInt("SLEEPNOMEAS",10000),preferences.getUInt("MEASTIME",0));
+            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("measTime",0));
         }
+        lora.rfSend("sleeping");
     }
     pins.all_CS_high();
     if(waitingtrans){
-        alg.runFromFile(preferences.getFloat("ROTSPEED",1),228.6,4500,preferences.getString("NEWNAME",""));
+        alg.runFromFile(preferences.getFloat("ROTSPEED",1),preferences.getUInt("RAYONMOLETTE",229),preferences.getUInt("radius",4500),preferences.getString("NEWNAME",""));
         pins.all_CS_high();
         neopixelWrite(pins.LED, 0, 12, 0);
         int batt = cap.measBatt() * 100;
@@ -83,18 +85,19 @@ void mainPicot() {
         }
         lora.rafale(message, ind, id);
         preferences.putBool("waitingtrans",false);
-        rtc.goSleep2(preferences.getUInt("SLEEPMEAS",10000),preferences.getUInt("MEASTIME",0));
+        rtc.goSleep2(preferences.getUInt("sleepMeas",10000),preferences.getUInt("measTime",0));
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
         cap.initSens("lsm");
         cap.initSens("sick");
-        cap.mesurePicot(60);
+        cap.mesurePicot(preferences.getUInt("measDuration",60));
         preferences.putString("NEWNAME",cap.newName);
         preferences.putFloat("ROTSPEED",cap.wf);
         preferences.putBool("waitingtrans",true);
-        rtc.goSleep2(0,preferences.getUInt("TRANSTIME",0));
+        rtc.goSleep2(0,preferences.getUInt("transTime",0));
     }
+    preferences.end();
 }
 
 void loop() {
