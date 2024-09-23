@@ -250,7 +250,7 @@ void charger::serverRoutes() {
         String downFile = "/1/test1.txt";
 
         for (int i = 0; i < paramsNr; i++) {
-            AsyncWebParameter *p = request->getParam(i);
+            const AsyncWebParameter *p = request->getParam(i);
             Serial.print("Param name: ");
             Serial.println(p->name());
             Serial.print("Param value: ");
@@ -268,7 +268,7 @@ void charger::serverRoutes() {
         String remFile = "/1/test1.txt";
 
         for (int i = 0; i < paramsNr; i++) {
-            AsyncWebParameter *p = request->getParam(i);
+            const AsyncWebParameter *p = request->getParam(i);
             Serial.print("Param name: ");
             Serial.println(p->name());
             Serial.print("Param value: ");
@@ -293,7 +293,7 @@ void charger::serverRoutes() {
         String remFile = "/1/test1.txt";
 
         for (int i = 0; i < paramsNr; i++) {
-            AsyncWebParameter *p = request->getParam(i);
+            const AsyncWebParameter *p = request->getParam(i);
             Serial.print("Param name: ");
             Serial.println(p->name());
             Serial.print("Param value: ");
