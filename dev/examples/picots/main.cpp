@@ -16,7 +16,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 pinout pins(cardModel,breakout);
-rtcClass rtc(&preferences);
+rtcClass rtc(&preferences,SD_MMC);
 capteurs cap(&pins, &rtc, SD_MMC, &preferences,etrierModel);
 comLORA lora(&pins, &cap);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
@@ -37,7 +37,21 @@ void setup() {
     charge.initSPIFFS();
     charge.initWebSocket();
     charge.setup();
-    cap.measBatt();
+    float batvolt = cap.measBatt();
+    float RTCtemp=rtc.rtc.getTemperature();
+    File logFile = SD_MMC.open("log.txt", FILE_WRITE);
+    if (logFile) {
+        logFile.print("\n");
+        logFile.print("ON : ");
+        logFile.println(rtc.dateRTC(rtc.rtc.now()));
+        logFile.print("bat");
+        logFile.print(String(batvolt));
+        logFile.println("V");
+        logFile.print("RTC temp: ");
+        logFile.println(String(RTCtemp));
+    }
+    logFile.flush();
+    logFile.close();
 }
 
 byte message[100];
@@ -52,12 +66,39 @@ void mainPicot() {
     }
     bool waitingtrans = preferences.getBool("WAITINGTRANS",false);//pas de mesure en attente de transmission
     float w=cap.rot->wheelRot2();
+    float batvolt = cap.measBatt();
+    float RTCtemp=rtc.rtc.getTemperature();
+    File logFile = SD_MMC.open("log.txt", FILE_WRITE);
+    if (logFile) {
+        logFile.print("\n");
+        logFile.print("ON : ");
+        logFile.println(rtc.dateRTC(rtc.rtc.now()));
+        logFile.print("bat");
+        logFile.print(String(batvolt));
+        logFile.println("V");
+        logFile.print("RTC temp: ");
+        logFile.println(String(RTCtemp));
+        logFile.print("RDC speed: ");
+        logFile.print(String(w/2/M_PI*60));
+        logFile.println("rpm");
+        if(w<0.1*2*M_PI/60){logFile.println("back to sleep");}
+        else{
+            if(waitingtrans){
+                logFile.println("begin transmission");
+            }
+            else{
+                logFile.println("begin measurement");
+            }
+        }
+    }
+    logFile.flush();
+    logFile.close();
     if(w<0.1*2*M_PI/60){//rotation <0.1rpm
         if(waitingtrans){
-            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("transTime",0));
+            rtc.goSleepMinuteFixe(preferences.getUInt("sleepNoMeas",30),preferences.getUInt("transTime",0));
         }
         else{
-            rtc.goSleep2(preferences.getUInt("sleepNoMeas",10000),preferences.getUInt("measTime",0));
+            rtc.goSleepMinuteFixe(preferences.getUInt("sleepNoMeas",30),preferences.getUInt("measTime",0));
         }
         lora.rfSend("sleeping");
     }
@@ -85,7 +126,7 @@ void mainPicot() {
         }
         lora.rafale(message, ind, id);
         preferences.putBool("waitingtrans",false);
-        rtc.goSleep2(preferences.getUInt("sleepMeas",10000),preferences.getUInt("measTime",0));
+        rtc.goSleepHeureFixe(preferences.getUInt("sleepMeas",8),preferences.getUInt("measTime",0));
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
@@ -95,7 +136,7 @@ void mainPicot() {
         preferences.putString("NEWNAME",cap.newName);
         preferences.putFloat("ROTSPEED",cap.wf);
         preferences.putBool("waitingtrans",true);
-        rtc.goSleep2(0,preferences.getUInt("transTime",0));
+        rtc.goSleepMinuteFixe(0,preferences.getUInt("transTime",0));
     }
     preferences.end();
 }

@@ -3,18 +3,18 @@
 angle::angle(Adafruit_LSM6DSOX* acc,String modele) {
     dsox = acc;
     if(modele=="ripperL17"){
-        rotmat[0]=1;//axe x vers la gauche
-        rotmat[5]=1;//axe z vers le haut
-        rotmat[7]=-1;//axe y vers l'arrière
+        rotmat[0]=1;//axe x vers la droite
+        rotmat[5]=-1;//axe z vers le haut
+        rotmat[7]=1;//axe y vers l'avant
     }
     else if(modele=="etrier17"){
-        rotmat[0]=1;//axe x vers la gauche
-        rotmat[5]=1;//axe z vers le haut
-        rotmat[7]=-1;//axe y vers l'arrière
+        rotmat[1]=1;//axe y vers la gauche
+        rotmat[5]=-1;//axe z vers le bas
+        rotmat[8]=1;//axe z vers l'avant
     }
     else{//ancien l17
-        rotmat[0]=1;//axe x vers la gauche
-        rotmat[4]=1;//axe y vers lle haut
+        rotmat[0]=1;//axe x vers la droite
+        rotmat[4]=1;//axe y vers le bas
         rotmat[8]=1;//axe z vers l'avant
     }
 }
