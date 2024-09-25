@@ -1,6 +1,7 @@
 #include "comLORA.h"
 
-comLORA::comLORA(pinout *p, capteurs *c) {
+comLORA::comLORA(pinout *p, capteurs *c,Preferences *pr) {
+    preferences = pr;
     pins = p;
     cap = c;
     // rhSPI = s;
@@ -56,7 +57,9 @@ void comLORA::pinSetup() {
 }
 
 void comLORA::rfSend(String message) {
-    String mess2Send = "T"+String(cap->id) + ",";//message texte
+    preferences->begin("prefid", false);
+    String mess2Send = "T"+String(preferences->getUInt("id", 0)) + ",";//message texte
+    preferences->end();
     mess2Send += message;
     // send a message using radio module
     rf95Setup();

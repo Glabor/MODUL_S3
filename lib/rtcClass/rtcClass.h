@@ -55,23 +55,41 @@ public:
         dateString += String(dateDate.second(), DEC);
         return dateString;
     }
+    void log(float batvolt,bool waitingtrans,float w){
+        float RTCtemp=rtc.getTemperature();
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+        if (logFile) {
+            logFile.print("\n");
+            logFile.print("ON : ");
+            logFile.println(dateRTC(rtc.now()));
+            logFile.print("bat");
+            logFile.print(String(batvolt));
+            logFile.println("V");
+            logFile.print("RTC temp: ");
+            logFile.println(String(RTCtemp));
+            logFile.print("RDC speed: ");
+            logFile.print(String(w/2/M_PI*60));
+            logFile.println("rpm");
+            if(w<0.1*2*M_PI/60){logFile.println("back to sleep");}
+            else{
+                if(waitingtrans){
+                    logFile.println("begin transmission");
+                }
+                else{
+                    logFile.println("begin measurement");
+                }
+            }
+        }
+        logFile.flush();
+        logFile.close();
+    }
     void goSleepMinuteFixe(int sleepMinutes,int minute){
-        DateTime d0=rtc.now()+TimeSpan(sleepMinutes*60);
+        DateTime d0=rtc.now();
         DateTime d1=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute, 0);
-        if(d0.minute()>minute){
-            if(d0.minute()-minute>30){
-                d1=d1+TimeSpan(3600);
-            }
-        }
-        else{
-            if(minute-d0.minute()>30){
-                d1=d1-TimeSpan(3600);
-            }
-        }
-        while(d1<d0){
+        while(d1<d0+TimeSpan(sleepMinutes*60)-TimeSpan(30*60)){
             d1=d1+TimeSpan(3600);
         }
-        File logFile = SD_MMC.open("log.txt", FILE_WRITE);
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
         if (logFile) {    
               logFile.println("wakeup set to:") ;
               logFile.println(dateRTC(d1)); 
@@ -94,7 +112,7 @@ public:
         if(h1==0){
             t1=t1+TimeSpan(24*60*60);
         }
-        File logFile = SD_MMC.open("log.txt", FILE_WRITE);
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
         if (logFile) {    
               logFile.println("wakeup set to:") ;
               logFile.println(dateRTC(t1)); 

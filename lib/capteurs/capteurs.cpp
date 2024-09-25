@@ -14,9 +14,9 @@ capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, String mo
     preferences = pr;
     adxl = new Adafruit_ADXL375(pins->ADXL375_SCK, pins->ADXL375_MISO,
                                 pins->ADXL375_MOSI, pins->ADXL375_CS, 12345);
-    preferences->begin("prefid", false);
+    /*preferences->begin("prefid", false);
     id = preferences->getUInt("id", 0);
-    preferences->end();
+    preferences->end();*/
 }
 float capteurs::measBatt() {
     float cellVolt;
@@ -258,7 +258,7 @@ bool capteurs::initSens(String sens) {
         // digitalWrite(pins->ON_SICK, HIGH);
         return true;
     } else if (sens == "LDC1") {
-        if (pins->LHR_CS_2 < 0) {
+        if (pins->LHR_CS_1 < 0) {
             return false;
         }
         ldc1->LHRSetup();

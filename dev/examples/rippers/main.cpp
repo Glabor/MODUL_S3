@@ -18,7 +18,7 @@ AsyncWebSocket ws("/ws");
 pinout pins(cardModel,breakout);
 rtcClass rtc(&preferences,SD_MMC);
 capteurs cap(&pins, &rtc, SD_MMC, &preferences,etrierModel);
-comLORA lora(&pins, &cap);
+comLORA lora(&pins, &cap,&preferences);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
 
 void setup() {
@@ -44,6 +44,7 @@ int ind;
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
 #define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
 void mainRipper() {
+    preferences.begin("prefid", false);
     int id=preferences.getUInt("id",-1);
     if(id==-1){
         return;
@@ -51,40 +52,21 @@ void mainRipper() {
     bool waitingtrans = preferences.getBool("WAITINGTRANS",false);//pas de mesure en attente de transmission
     float w=cap.rot->wheelRot2();
     float batvolt = cap.measBatt();
-    float RTCtemp=rtc.rtc.getTemperature();
-    File logFile = SD_MMC.open("log.txt", FILE_WRITE);
-    if (logFile) {
-        logFile.print("\n");
-        logFile.print("ON : ");
-        logFile.println(rtc.dateRTC(rtc.rtc.now()));
-        logFile.print("bat");
-        logFile.print(String(batvolt));
-        logFile.println("V");
-        logFile.print("RTC temp: ");
-        logFile.println(String(RTCtemp));
-        logFile.print("RDC speed: ");
-        logFile.print(String(w/2/M_PI*60));
-        logFile.println("rpm");
-        if(w<0.1*2*M_PI/60){logFile.println("back to sleep");}
-        else{
-            if(waitingtrans){
-                logFile.println("begin transmission");
-            }
-            else{
-                logFile.println("begin measurement");
-            }
-        }
-    }
-    logFile.flush();
-    logFile.close();
+    rtc.log(batvolt, waitingtrans, w);
+    int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
+    int transTime =preferences.getUInt("transTime",0);
+    int measTime =preferences.getUInt("measTime",0);
+    int sleepMeas =preferences.getUInt("sleepMeas",8);
     if(w<0.1*2*M_PI/60){//rotation <0.1rpm
+        preferences.end();
+        lora.rfSend("sleeping");
         if(waitingtrans){
-            rtc.goSleepMinuteFixe(preferences.getUInt("sleepNoMeas",30),preferences.getUInt("transTime",0));
+            rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
         else{
-            rtc.goSleepMinuteFixe(preferences.getUInt("sleepNoMeas",30),preferences.getUInt("measTime",0));
+            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
         }
-        lora.rfSend("sleeping");
+        
     }
     pins.all_CS_high();
     if(waitingtrans){
@@ -100,7 +82,8 @@ void mainRipper() {
         add2byte(batt);
         lora.rafale(message, 14, id);
         preferences.putBool("waitingtrans",false);
-        rtc.goSleepHeureFixe(preferences.getUInt("sleepMeas",8),preferences.getUInt("measTime",0));
+        preferences.end();
+        rtc.goSleepHeureFixe(sleepMeas,measTime);
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
@@ -112,7 +95,8 @@ void mainRipper() {
         preferences.putLong("f2Min",cap.ldc1->f2Min);
         preferences.putLong("f2moy",cap.ldc1->f2moy);
         preferences.putBool("waitingtrans",true);
-        rtc.goSleepMinuteFixe(0,preferences.getUInt("transTime",0));
+        preferences.end();
+        rtc.goSleepMinuteFixe(0,transTime);
     }
 }
 void loop() {

@@ -66,12 +66,12 @@ float angle::correctionangle(float alpha,float ax, float ay, float az, float gx,
 float angle::wheelRot2(void) {
     //int rotW;
     unsigned long sampleTime = 2000;
-    unsigned long micro0 = millis();
+    unsigned long micro0 = micros();
     dsox->getEvent(&accel, &gyro, &temp);
-    initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, accel.gyro.x, accel.gyro.y, accel.gyro.z,micro0);
+    initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,micro0);
     while (micros() - micro0 < sampleTime*1000) {
         dsox->getEvent(&accel, &gyro, &temp);
-        anglef=correctionangle(0.1,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, accel.gyro.x, accel.gyro.y, accel.gyro.z, micros() );
+        anglef=correctionangle(0.1,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros() );
     }
     return w;
 }
