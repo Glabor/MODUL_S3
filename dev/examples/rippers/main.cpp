@@ -9,7 +9,7 @@
 #include "rtcClass.h"
 
 String cardModel = "v3.1";
-String breakout = "ripperv1";
+String breakout = "rippersimplev1";
 String etrierModel="ripperL17";
 Preferences preferences;
 AsyncWebServer server(80);
@@ -73,12 +73,20 @@ void mainRipper() {
         int batt = cap.measBatt() * 100;
         neopixelWrite(pins.LED, 0, 12, 0);
         add2byte(id);
-        add3byte(preferences.getLong("f1Max",0));
-        add3byte(preferences.getLong("f1Min",0));
-        add3byte(preferences.getLong("f1moy",0));
-        add3byte(preferences.getLong("f2Max",0));
-        add3byte(preferences.getLong("f2Min",0));
-        add3byte(preferences.getLong("f2moy",0));
+        add3byte(preferences.getLong("f1Max1",0));
+        add3byte(preferences.getLong("f1Min1",0));
+        add3byte(preferences.getLong("f1moy1",0));
+        add3byte(preferences.getLong("f2Max1",0));
+        add3byte(preferences.getLong("f2Min1",0));
+        add3byte(preferences.getLong("f2moy1",0));
+        if(breakout == "ripperdoublev1"){
+            add3byte(preferences.getLong("f1Max2",0));
+            add3byte(preferences.getLong("f1Min2",0));
+            add3byte(preferences.getLong("f1moy2",0));
+            add3byte(preferences.getLong("f2Max2",0));
+            add3byte(preferences.getLong("f2Min2",0));
+            add3byte(preferences.getLong("f2moy2",0));
+        }
         add2byte(batt);
         lora.rafale(message, 14, id);
         preferences.putBool("waitingtrans",false);
@@ -88,12 +96,25 @@ void mainRipper() {
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
         cap.mesureRipper(10,"LDC1");
-        preferences.putLong("f1Max",cap.ldc1->f1Max);
-        preferences.putLong("f1Min",cap.ldc1->f1Min);
-        preferences.putLong("f1moy",cap.ldc1->f1moy);
-        preferences.putLong("f2Max",cap.ldc1->f2Max);
-        preferences.putLong("f2Min",cap.ldc1->f2Min);
-        preferences.putLong("f2moy",cap.ldc1->f2moy);
+        if(cap.ldc1->count>0){
+            preferences.putLong("f1Max1",cap.ldc1->f1Max);
+            preferences.putLong("f1Min1",cap.ldc1->f1Min);
+            preferences.putLong("f1moy1",cap.ldc1->f1moy);
+            preferences.putLong("f2Max1",cap.ldc1->f2Max);
+            preferences.putLong("f2Min1",cap.ldc1->f2Min);
+            preferences.putLong("f2moy1",cap.ldc1->f2moy);
+        }
+        if(breakout == "ripperdoublev1"){
+            cap.mesureRipper(10,"LDC2");
+            if(cap.ldc2->count>0){
+                preferences.putLong("f1Max2",cap.ldc1->f1Max);
+                preferences.putLong("f2Min2",cap.ldc1->f1Min);
+                preferences.putLong("f1moy2",cap.ldc1->f1moy);
+                preferences.putLong("f2Max2",cap.ldc1->f2Max);
+                preferences.putLong("f2Min2",cap.ldc1->f2Min);
+                preferences.putLong("f2moy2",cap.ldc1->f2moy);
+            }
+        }
         preferences.putBool("waitingtrans",true);
         preferences.end();
         rtc.goSleepMinuteFixe(0,transTime);

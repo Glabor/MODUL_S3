@@ -5,7 +5,7 @@ class LDC {
     public:
     LDC(pinout *p);
     void LHRSetup();
-    void mesure2f(int cs,int sw);
+    bool mesure2f(int cs,int sw);
     long LHR_LSB1, LHR_MID1, LHR_MSB1,LHR_LSB2, LHR_MID2, LHR_MSB2, f1,f2;
     int count=0;
     long f1Max=LONG_MAX;

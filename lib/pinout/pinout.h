@@ -71,6 +71,8 @@ public:
             LHR_SWITCH_1 = 15;
         }
         if(breakout=="ripperdoublev1"){
+            LHR_CS_1 = 16;
+            LHR_SWITCH_1 = 15;
             LHR_CS_2 = 0;
             LHR_SWITCH_2 = 0;
         }

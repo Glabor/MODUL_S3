@@ -166,6 +166,7 @@ void capteurs::mesurePicot(long senstime) {
             r++;
         }
         getSens("lsm");
+        getSens("lsmGyro");
         for (int j = 0; j < r; j++) {
             file.write(sdBuf[j]);
         }
@@ -210,34 +211,36 @@ void capteurs::mesureRipper(long senstime, String sens) {
             r++;
         }
         if (sens == "LDC1") {
-            ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
-            sdBuf[r] = ldc1->LHR_MSB1;
-            r++;
-            sdBuf[r] = ldc1->LHR_MID1;
-            r++;
-            sdBuf[r] = ldc1->LHR_LSB1;
-            r++;
-            sdBuf[r] = ldc1->LHR_MSB2;
-            r++;
-            sdBuf[r] = ldc1->LHR_MID2;
-            r++;
-            sdBuf[r] = ldc1->LHR_LSB2;
-            r++;
+            if(ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1)){
+                sdBuf[r] = ldc1->LHR_MSB1;
+                r++;
+                sdBuf[r] = ldc1->LHR_MID1;
+                r++;
+                sdBuf[r] = ldc1->LHR_LSB1;
+                r++;
+                sdBuf[r] = ldc1->LHR_MSB2;
+                r++;
+                sdBuf[r] = ldc1->LHR_MID2;
+                r++;
+                sdBuf[r] = ldc1->LHR_LSB2;
+                r++;
+                }
         }
         if (sens == "LDC2") {
-            ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2);
-            sdBuf[r] = ldc2->LHR_MSB1;
-            r++;
-            sdBuf[r] = ldc2->LHR_MID1;
-            r++;
-            sdBuf[r] = ldc2->LHR_LSB1;
-            r++;
-            sdBuf[r] = ldc2->LHR_MSB2;
-            r++;
-            sdBuf[r] = ldc2->LHR_MID2;
-            r++;
-            sdBuf[r] = ldc2->LHR_LSB2;
-            r++;
+            if(ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2)){
+                sdBuf[r] = ldc2->LHR_MSB1;
+                r++;
+                sdBuf[r] = ldc2->LHR_MID1;
+                r++;
+                sdBuf[r] = ldc2->LHR_LSB1;
+                r++;
+                sdBuf[r] = ldc2->LHR_MSB2;
+                r++;
+                sdBuf[r] = ldc2->LHR_MID2;
+                r++;
+                sdBuf[r] = ldc2->LHR_LSB2;
+                r++;
+            }
         }
     }
 }
@@ -281,6 +284,14 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
         return;
+    if (sens == "lsmGyro") {
+        sensors_event_t event;
+        dsox.getEvent(&accel, &gyro, &temp);
+        accBuffering((int)(gyro.gyro.x * 100));
+        accBuffering((int)(gyro.gyro.y * 100));
+        accBuffering((int)(gyro.gyro.z * 100));
+        return;
+    }
     } else if (sens == "adxl") {
         sensors_event_t event;
         adxl->getEvent(&event);

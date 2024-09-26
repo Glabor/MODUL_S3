@@ -82,13 +82,16 @@ void LDC::LHRSetup()
     }
     reset2f();
 }
-void LDC::mesure2f(int cs, int sw)
+bool LDC::mesure2f(int cs, int sw)
 {
+    bool m1=false;
+    bool m2=false;
     digitalWrite(sw,HIGH);
     delay(100);
     digitalWrite(cs, LOW);
     SPI.transfer(0x3B | READ); // reading status
-    uint8_t LHR_status = SPI.transfer(0x00);
+    uint8_t LHR_status=1;
+    LHR_status = SPI.transfer(0x00);
     digitalWrite(cs, HIGH);
     if (LHR_status == 0) {
         neopixelWrite(pins->LED, 12, 12, 12);
@@ -98,11 +101,13 @@ void LDC::mesure2f(int cs, int sw)
         LHR_MSB1 = ReadLHR_Data(0x3A,cs);
         inductance = (LHR_MSB1 << 16) | (LHR_MID1 << 8) | LHR_LSB1;
         f1 = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
+        m1=true;
     }
     digitalWrite(sw,LOW);
     delay(100);
     digitalWrite(cs, LOW);
     SPI.transfer(0x3B | READ); // reading status
+    LHR_status =1;
     LHR_status = SPI.transfer(0x00);
     digitalWrite(cs, HIGH);
     if (LHR_status == 0) {
@@ -113,6 +118,7 @@ void LDC::mesure2f(int cs, int sw)
         LHR_MSB2 = ReadLHR_Data(0x3A,cs);
         inductance = (LHR_MSB2 << 16) | (LHR_MID2 << 8) | LHR_LSB2;
         f2 = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
+        m2=true;
     }
     count++;
     f1Max=max(f1,f1Max);
@@ -123,6 +129,7 @@ void LDC::mesure2f(int cs, int sw)
     f2Min=min(f2,f2Min);
     f2sum+=f2;
     f2moy=f2sum/count;
+    return m1&m2;
 }
 /*void LDC::LDC_LHRMesure(long *f1Moy,long *f2Moy, int duration,int cs,int sw) {
     if(cs<0){
