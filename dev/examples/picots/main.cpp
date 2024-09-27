@@ -39,10 +39,12 @@ void setup() {
     charge.setup();
 }
 
-byte message[100];
+byte message[150];
 int ind;
 #define addbyte(val){ message[ind]=val; ind++;}
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
+#define add4byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++; message[ind]=lowByte(val>>24); ind++;}
+
 void mainPicot() {
     preferences.begin("prefid", false);
     int id=preferences.getUInt("id",-1);
@@ -70,27 +72,30 @@ void mainPicot() {
     }
     pins.all_CS_high();
     if(waitingtrans){
-        alg.runFromFile(preferences.getFloat("ROTSPEED",1),preferences.getUInt("RAYONMOLETTE",229),preferences.getUInt("radius",4500),preferences.getString("NEWNAME",""));
-        pins.all_CS_high();
-        neopixelWrite(pins.LED, 0, 12, 0);
-        int batt = cap.measBatt() * 100;
-        ind=0;
-        add2byte(id);
-        add2byte(alg.usureMu);
-        add2byte(alg.usuremu);
-        add2byte((int)alg.usuremoyu);
-        add2byte(alg.usureMd);
-        add2byte(alg.usuremd);
-        add2byte((int)alg.usuremoyd);
-        addbyte( (byte) alg.pat1f*100);
-        addbyte( (byte) alg.nPic);
-        addbyte( (byte) alg.mincor);
-        add2byte( lowByte((int)alg.minsum));
-        add2byte(batt);
-        for(int i=0;i<45;i++){
-            addbyte(alg.probfilb[i]);
+        if(alg.runFromFile(preferences.getFloat("ROTSPEED",1),preferences.getUInt("RAYONMOLETTE",229),preferences.getUInt("radius",4500),preferences.getString("NEWNAME",""))){
+            pins.all_CS_high();
+            neopixelWrite(pins.LED, 0, 12, 0);
+            int batt = cap.measBatt() * 100;
+            ind=0;
+            add2byte(id);
+            add4byte(preferences.getLong("timestamp",0));
+            add2byte(batt);
+            add2byte((int)preferences.getFloat("ROTSPEED",0)*100);
+            add2byte(alg.usureMu);
+            add2byte(alg.usuremu);
+            add2byte((int)alg.usuremoyu);
+            add2byte(alg.usureMd);
+            add2byte(alg.usuremd);
+            add2byte((int)alg.usuremoyd);
+            addbyte( (byte) alg.pat1f*100);
+            addbyte( (byte) alg.nPic);
+            addbyte( (byte) alg.mincor);
+            add2byte( lowByte((int)alg.minsum));
+            for(int i=0;i<45;i++){
+                addbyte(alg.probfilb[i]);
+            }
+            lora.rafale(message, ind, id);
         }
-        lora.rafale(message, ind, id);
         preferences.putBool("waitingtrans",false);
         preferences.end();
         rtc.goSleepHeureFixe(sleepMeas,measTime);
@@ -99,7 +104,9 @@ void mainPicot() {
         neopixelWrite(pins.LED, 0, 0, 12);
         cap.initSens("lsm");
         cap.initSens("sick");
-        cap.mesurePicot(preferences.getUInt("measDuration",60));
+        long timestamp=rtc.rtc.now().unixtime();
+        preferences.putLong("timestamp",timestamp);
+        cap.mesurePicot(preferences.getUInt("sleep",60));
         preferences.putString("NEWNAME",cap.newName);
         preferences.putFloat("ROTSPEED",cap.wf);
         preferences.putBool("waitingtrans",true);

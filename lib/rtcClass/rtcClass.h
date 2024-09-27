@@ -89,6 +89,9 @@ public:
         while(d1<d0+TimeSpan(sleepMinutes*60)-TimeSpan(30*60)){
             d1=d1+TimeSpan(3600);
         }
+        while(d1<d0){
+            d1=d1+TimeSpan(3600);
+        }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
         if (logFile) {    
               logFile.println("wakeup set to:") ;

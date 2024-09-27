@@ -151,14 +151,14 @@ String charger::processor(const String &var) {
     }
     if (var == "SLEEPMEAS") {
         preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleepMeas", 0); // sleep after measuring
+        int idRead = preferences->getUInt("sleepMeas", 0); // sleep after measuring (h)
         preferences->end();
 
         return (String(idRead));
     }
     if (var == "SLEEPNOMEAS") {
         preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleepNoMeas", 0); // sleep after not measuring
+        int idRead = preferences->getUInt("sleepNoMeas", 0); // sleep after not measuring (min)
         preferences->end();
 
         return (String(idRead));
@@ -745,7 +745,7 @@ int charger::manageLoop() {
         if (!rtc->chg) {
             // sleep
             preferences->begin("prefid", false);
-            int idRead = preferences->getUInt("sleep", 33);
+            int idRead = preferences->getUInt("sleepNoMeas", 33);
             preferences->end();
             rtc->goSleep(idRead);
         } else {

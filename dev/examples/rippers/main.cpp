@@ -43,6 +43,8 @@ int ind;
 #define addbyte(val){ message[ind]=val; ind++;}
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
 #define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
+#define add4byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++; message[ind]=lowByte(val>>24); ind++;}
+
 void mainRipper() {
     preferences.begin("prefid", false);
     int id=preferences.getUInt("id",-1);
@@ -73,6 +75,7 @@ void mainRipper() {
         int batt = cap.measBatt() * 100;
         neopixelWrite(pins.LED, 0, 12, 0);
         add2byte(id);
+        add4byte(preferences.getLong("timestamp",0));
         add3byte(preferences.getLong("f1Max1",0));
         add3byte(preferences.getLong("f1Min1",0));
         add3byte(preferences.getLong("f1moy1",0));
@@ -95,6 +98,9 @@ void mainRipper() {
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
+        long timestamp=rtc.rtc.now().unixtime();
+        preferences.putLong("timestamp",timestamp);
+        int duration=preferences.getUInt("sleep",10);
         cap.mesureRipper(10,"LDC1");
         if(cap.ldc1->count>0){
             preferences.putLong("f1Max1",cap.ldc1->f1Max);

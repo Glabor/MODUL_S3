@@ -23,7 +23,7 @@ public:
     float sum[nd];
     int vPicBuff[4 * nd];
     unsigned long tPicBuff[4 * nd];
-    void runFromFile(float omega, int r, int R,String path);
+    bool runFromFile(float omega, int r, int R,String path);
     float usuremoyu = 0;        // average wear M
     int usureMu = INT_MIN;      // max wear M ever
     int usuremu = INT_MAX;      // min wear M ever

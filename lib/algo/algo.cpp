@@ -132,7 +132,7 @@ unsigned long uread(File inFile){
     inFile.readBytes((char*)&lowbyte, sizeof(lowbyte)); 
     return highbyte<<8|lowbyte;
 }
-void algo::runFromFile(float omega, int r, int R,String path)
+bool algo::runFromFile(float omega, int r, int R,String path)
 {
     float ax, ay, az, gx, gy, gz, v,anglef;
     unsigned long t;
@@ -144,7 +144,7 @@ void algo::runFromFile(float omega, int r, int R,String path)
     }
     else{
         Serial.println("cannot open file");
-        return;
+        return false;
     }
     int long t0=millis();
     int n=inFile.size()/2/207;
@@ -174,6 +174,7 @@ void algo::runFromFile(float omega, int r, int R,String path)
     pat1f = (float)pat1 / (float)(TIME - period * nd); // percent value of patc
     inFile.close();
     compressprofil();
+    return true;
 }
 
 void algo::compressprofil()

@@ -28,7 +28,7 @@ public:
             RFM95_INT = 11;
             RFM95_CS = 12;
             battPin = 9;
-            ledPin = 4;
+            //ledPin = 4;
             RxPin = 18;
             TxPin = 17;
 
@@ -57,7 +57,7 @@ public:
             RFM95_INT = 11;
             RFM95_CS = 12;
             battPin = 9;
-            ledPin = 4;
+            //ledPin = 4;
             RxPin = 18;
             TxPin = 17;
             //Ext_SPI_CS= 04;
@@ -71,10 +71,10 @@ public:
             LHR_SWITCH_1 = 15;
         }
         if(breakout=="ripperdoublev1"){
-            LHR_CS_1 = 16;
+            LHR_CS_1 = 4;
             LHR_SWITCH_1 = 15;
-            LHR_CS_2 = 0;
-            LHR_SWITCH_2 = 0;
+            LHR_CS_2 = 5;
+            LHR_SWITCH_2 = 16;
         }
         if(breakout=="HMCv1"){
             HMCX_CS = 12;
@@ -90,7 +90,7 @@ public:
         SPI_CS_list[5]=HMCY_CS;
         SPI_CS_list[6]=HMCZ_CS;
     };
-    int ledPin;
+    //int ledPin;
     String ledState;
     float bright = 12.0;
     float color[3] = {0., 0., 0.};
