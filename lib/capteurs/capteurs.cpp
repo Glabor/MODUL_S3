@@ -4,10 +4,10 @@ capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, String mo
     rot = new angle(&dsox, modele);
     pins = p;
     if (pins->LHR_CS_1 >= 0) {
-        ldc1 = new LDC(pins);
+        ldc1 = new LDC(pins,pins->LHR_CS_1,pins->LHR_SWITCH_1);
     }
     if (pins->LHR_CS_2 >= 0) {
-        ldc2 = new LDC(pins);
+        ldc2 = new LDC(pins,pins->LHR_CS_2,pins->LHR_SWITCH_2);
     }
     rtc = r;
     fs = &f;
@@ -211,7 +211,7 @@ void capteurs::mesureRipper(long senstime, String sens) {
             r++;
         }
         if (sens == "LDC1") {
-            if(ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1)){
+            if(ldc1->mesure2f()){
                 sdBuf[r] = ldc1->LHR_MSB1;
                 r++;
                 sdBuf[r] = ldc1->LHR_MID1;
@@ -227,7 +227,7 @@ void capteurs::mesureRipper(long senstime, String sens) {
                 }
         }
         if (sens == "LDC2") {
-            if(ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2)){
+            if(ldc2->mesure2f()){
                 sdBuf[r] = ldc2->LHR_MSB1;
                 r++;
                 sdBuf[r] = ldc2->LHR_MID1;
@@ -242,7 +242,13 @@ void capteurs::mesureRipper(long senstime, String sens) {
                 r++;
             }
         }
+        for (int j = 0; j < r; j++) {
+                file.write(sdBuf[j]);
+            }
+        r = 0;
     }
+    file.flush();
+    file.close();
 }
 
 bool capteurs::initSens(String sens) {
@@ -284,7 +290,8 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
         return;
-    if (sens == "lsmGyro") {
+    }
+    else if (sens == "lsmGyro") {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
         accBuffering((int)(gyro.gyro.x * 100));
@@ -292,7 +299,7 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(gyro.gyro.z * 100));
         return;
     }
-    } else if (sens == "adxl") {
+    else if (sens == "adxl") {
         sensors_event_t event;
         adxl->getEvent(&event);
         accBuffering((int)(event.acceleration.x * 100));
@@ -348,14 +355,14 @@ void capteurs::getSens(String sens) {
         if (pins->LHR_CS_1 < 0) {
             return;
         }
-        ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
+        ldc1->mesure2f();
         accBuffering((int)ldc1->f1 / 1000);
         accBuffering((int)ldc1->f2 / 1000);
     } else if (sens == "LDC2") {
         if (pins->LHR_CS_2 < 0) {
             return;
         }
-        ldc2->mesure2f(pins->LHR_CS_2, pins->LHR_SWITCH_2);
+        ldc2->mesure2f();
         accBuffering((int)ldc2->f1 / 1000);
         accBuffering((int)ldc2->f2 / 1000);
     }
@@ -454,4 +461,7 @@ void capteurs::pinSetup() {
         pinMode(pins->LHR_SWITCH_2, OUTPUT);
         digitalWrite(pins->LHR_SWITCH_2, LOW);
     }
+    pins->all_CS_high();
+    SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
+
 }

@@ -70,10 +70,13 @@ public:
             logFile.print("RDC speed: ");
             logFile.print(String(w/2/M_PI*60));
             logFile.println("rpm");
-            if(w<0.1*2*M_PI/60){logFile.println("back to sleep");}
+            if(abs(w)<0.1*2*M_PI/60){logFile.println("back to sleep");}
             else{
                 if(waitingtrans){
-                    logFile.println("begin transmission");
+                    preferences->begin("prefid", false);
+                    logFile.print("begin transmission: ");
+                    logFile.println(preferences->getString("NEWNAME",""));
+                    preferences->end();
                 }
                 else{
                     logFile.println("begin measurement");

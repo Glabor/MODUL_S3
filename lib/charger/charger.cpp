@@ -667,12 +667,23 @@ void charger::loopWS() {
         prints["angle"] = String((int)cap->rot->anglef);
     }
     if (bLDC) {
-        if (pins->LHR_CS_1 < 0) {
-            return;
+        SPI.end();
+        cap->pinSetup();
+        cap->ldc1->LHRSetup();
+        cap->ldc2->LHRSetup();
+        String result="";
+        //prints["ldc"]=',';
+        if (pins->LHR_CS_1 >= 0) {
+            //cap->initSens("LDC1");
+            cap->ldc1->mesure2f();
+            result+=String((int)cap->ldc1->f1 / 1000) + ',' +String((int)cap->ldc1->f2 / 1000)+',';
         }
-        cap->ldc1->mesure2f(pins->LHR_CS_1, pins->LHR_SWITCH_1);
-        prints["ldc"] = String((int)cap->ldc1->f1 / 1000) + ',' +
-                        String((int)cap->ldc1->f2 / 1000);
+        if (pins->LHR_CS_2 >= 0) {
+            //cap->initSens("LDC2");
+            cap->ldc2->mesure2f();
+            result+=String((int)cap->ldc2->f1 / 1000) + ',' +String((int)cap->ldc2->f2 / 1000);
+        }
+        prints["ldc"]=result;
     }
     if (bS_LDC) {
         cap->saveSens("LDC1", cap->genVar);

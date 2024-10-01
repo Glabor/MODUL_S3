@@ -41,7 +41,7 @@ private:
     int M;                      // max value of stack
     int delta;                  // amplitude of stack
     int seuil1 = 20;            // premier seuil
-    int seuil2 = 50;           // deuxieme seuil (plus grand)
+    //int seuil2 = 50;           // deuxieme seuil (plus grand)
     
     long nmoy = 0;              // number of values in average calculation
     unsigned long t0;       // first time of stack

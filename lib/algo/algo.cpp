@@ -6,6 +6,8 @@ bool algo::newval(int V, unsigned long t, float anglef)
     stack.appendFilt(V, t, t-(unsigned long)period);
     bool ispic = stack.update();                    // pic detecté
     delta = stack.Max - stack.Min;    // amplitude of values in stack
+    M=stack.Max;
+    m=stack.Min;
     if (delta > deltaM)
     { // max amplitude ever
         deltaM = delta;
@@ -61,7 +63,10 @@ bool algo::init(float omega, unsigned long t, int r, int R)
     r_molette = r;
     R_RDC = R;
     period = 2*M_PI*1000000 * float(r_molette) / abs(omega) / float(R_RDC) / nd;
-    float fs = 1000 / 1.2;//echantillonage
+    if(period<5){
+        return false;
+    }
+    float fs = 1000 / 1.06;//echantillonage
     stack.init(period /1000000* 0.8 *fs, period);
     for (int i = 0; i < nd; i++) {
         sum[i] = 0;
@@ -132,6 +137,17 @@ unsigned long uread(File inFile){
     inFile.readBytes((char*)&lowbyte, sizeof(lowbyte)); 
     return highbyte<<8|lowbyte;
 }
+unsigned long timestampRead(File inFile){
+    uint8_t t1;
+	uint8_t t2;
+    uint8_t t3;
+    uint8_t t4;
+    inFile.readBytes((char*)&t1, sizeof(t1));
+    inFile.readBytes((char*)&t2, sizeof(t2)); 
+    inFile.readBytes((char*)&t3, sizeof(t3));
+    inFile.readBytes((char*)&t4, sizeof(t4)); 
+    return t1<<24|t2<<16|t3<<8|t4;
+}
 bool algo::runFromFile(float omega, int r, int R,String path)
 {
     float ax, ay, az, gx, gy, gz, v,anglef;
@@ -147,9 +163,10 @@ bool algo::runFromFile(float omega, int r, int R,String path)
         return false;
     }
     int long t0=millis();
-    int n=inFile.size()/2/207;
+    int n=inFile.size()/2/308;
     for (int i = 0; i < n; i++) {
-        t=uread(inFile)*1000;
+        t=timestampRead(inFile);
+        Serial.println(t);
         ax=float(read(inFile)/100);
         ay=float(read(inFile)/100);
         az=float(read(inFile)/100);
@@ -157,17 +174,29 @@ bool algo::runFromFile(float omega, int r, int R,String path)
         gy=float(read(inFile)/100);
         gz=float(read(inFile)/100);
         if (first) {
-            init(omega, t,  r,  R);
+            Serial.println("init");
+            Serial.print("omega = ");
+            Serial.println(omega);
+            Serial.print("r = ");
+            Serial.println(r);
+            Serial.print("R = ");
+            Serial.println(R);
+            bool in=init(abs(omega), t,  r,  R);
+            if(!in){
+                return false;
+            }
 			rot.initangle(ax, ay, az, gx, gy, gz, t);
 			first = false;
-			init(0.236, t,121,2660);//test2 //periodes en ms
+            
+			//init(0.236, t,121,2660);//test2 //periodes en ms
 		}
         anglef=rot.correctionangle(0.1,ax, ay, az, gx, gy, gz, t);
         for (int j = 0; j < 100; j++) {
-			t=uread(inFile)*1000;
+			t=timestampRead(inFile);
 			v = read(inFile);
 			anglef=rot.updateangle(t);
             bool pic=newval(v, t, anglef);
+            Serial.println(j);
         }
     }
     unsigned long TIME = micros() - t0; 

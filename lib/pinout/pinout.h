@@ -67,14 +67,14 @@ public:
             d3 = 36; // GPIO 34 is not broken-out on ESP32-S3-DevKitC-1 v1.1
         }
         if(breakout=="rippersimplev1"){
-            LHR_CS_1 = 16;
+            LHR_CS_1 = 4;
             LHR_SWITCH_1 = 15;
         }
         if(breakout=="ripperdoublev1"){
             LHR_CS_1 = 4;
             LHR_SWITCH_1 = 15;
             LHR_CS_2 = 5;
-            LHR_SWITCH_2 = 16;
+            LHR_SWITCH_2 = 15;
         }
         if(breakout=="HMCv1"){
             HMCX_CS = 12;
