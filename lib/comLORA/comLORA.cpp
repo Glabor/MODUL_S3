@@ -58,7 +58,8 @@ void comLORA::pinSetup() {
 
 void comLORA::rfSend(String message) {
     preferences->begin("prefid", false);
-    String mess2Send = char(preferences->getUInt("id", 0)) + "T";//message texte
+    int id=preferences->getUInt("id", 99);
+    String mess2Send = "TT";//message texte
     preferences->end();
     mess2Send += message;
     // send a message using radio module
@@ -67,6 +68,7 @@ void comLORA::rfSend(String message) {
     int bufSize = mess2Send.length() + 1;
     char Buf[bufSize];
     mess2Send.toCharArray(Buf, bufSize);
+    Buf[0]=id;
     rf95->send((uint8_t *)Buf, bufSize);
     rf95->waitPacketSent();
 }

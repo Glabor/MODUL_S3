@@ -190,9 +190,7 @@ void capteurs::mesurePicot(long senstime) {
 }
 
 void capteurs::mesureRipper(long senstime, String sens) {
-    if (!initSens(sens)) {
-        return;
-    }
+    
     String fn = getName(sens);
     Serial.println(fn);
     int startMillis = millis();
@@ -202,16 +200,22 @@ void capteurs::mesureRipper(long senstime, String sens) {
     if (!file) {
         return;
     }
+    SPI.end();
+    pinSetup();
+    if (!initSens(sens)) {
+        return;
+    }
     unsigned long t0 = millis();
     unsigned long ta_micro;
     while (millis() < t0 + senstime * 1000) {
         ta_micro = micros() - time0;
-        for (size_t j = 0; j < 4; j++) {
-            sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
-            r++;
-        }
+        r=0;
         if (sens == "LDC1") {
             if(ldc1->mesure2f()){
+                for (size_t j = 0; j < 4; j++) {
+                    sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+                    r++;
+                }
                 sdBuf[r] = ldc1->LHR_MSB1;
                 r++;
                 sdBuf[r] = ldc1->LHR_MID1;
@@ -228,6 +232,10 @@ void capteurs::mesureRipper(long senstime, String sens) {
         }
         if (sens == "LDC2") {
             if(ldc2->mesure2f()){
+                for (size_t j = 0; j < 4; j++) {
+                    sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+                    r++;
+                }
                 sdBuf[r] = ldc2->LHR_MSB1;
                 r++;
                 sdBuf[r] = ldc2->LHR_MID1;
@@ -244,7 +252,7 @@ void capteurs::mesureRipper(long senstime, String sens) {
         }
         for (int j = 0; j < r; j++) {
                 file.write(sdBuf[j]);
-            }
+        }
         r = 0;
     }
     file.flush();
@@ -369,7 +377,7 @@ void capteurs::getSens(String sens) {
     return;
 }
 String capteurs::getName(String sens) {
-    int startTime = 123456789;
+    long startTime = 123456789;
     if (rtc->rtcConnected) {
         DateTime startDate = rtc->rtc.now();
         startTime = startDate.unixtime();

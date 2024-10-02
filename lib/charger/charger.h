@@ -45,6 +45,7 @@ private:
     void loopWS();
     int manageLoop();
     void normalTask();
+    bool dirClear(String path);
 
     // Replace with your network credentials
     String ssid = "GL-AR300M-c40";

@@ -10,12 +10,12 @@ void LDC::reset2f()
     count=0;
     count1=0;
     count2=0;
-    f1Max=LONG_MAX;
-    f1Min=LONG_MIN;
+    f1Max=LONG_MIN;
+    f1Min=LONG_MAX;
     f1sum=0;
     f1moy;
-    f2Max=LONG_MAX;
-    f2Min=LONG_MIN;
+    f2Max=LONG_MIN;
+    f2Min=LONG_MAX;
     f2sum=0;
     f2moy;
 }
@@ -84,7 +84,7 @@ bool LDC::mesure2f()
         LHR_MSB1 = ReadLHR_Data(0x3A);
         inductance = (LHR_MSB1 << 16) | (LHR_MID1 << 8) | LHR_LSB1;
         f1 = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
-        Serial.println(f1);
+        //Serial.println(f1);
         m1=true;
         count1++;
         f1Max=max(f1,f1Max);
@@ -109,19 +109,19 @@ bool LDC::mesure2f()
         f2 = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
         m2=true;
         count2++;
-         f2Max=max(f2,f2Max);
+        f2Max=max(f2,f2Max);
         f2Min=min(f2,f2Min);
         f2sum+=f2;
         f2moy=f2sum/count2;
     }
     count=count1+count2;
-    Serial.print("f1 = ");
+    /*Serial.print("f1 = ");
     Serial.print(f1);
     Serial.print(", f2 = ");
     Serial.println(f2);
     Serial.println("setup done");
     Serial.print(count);
-    Serial.println(" mesures LDC");
+    Serial.println(" mesures LDC");*/
     
    
     return m1&m2;

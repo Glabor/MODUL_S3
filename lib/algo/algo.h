@@ -17,6 +17,7 @@ public:
     int mincor = 0;//periode des pics
     byte probfilb[45];
     timedbuffer stack;
+    String error="";
     int nPic = 0;//nombre de pics
     int indPic = 0;
     float minsum = -1;//corelation

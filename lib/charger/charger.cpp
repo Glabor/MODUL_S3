@@ -301,7 +301,8 @@ void charger::serverRoutes() {
             Serial.println("------");
             remFile = p->value();
         }
-        if (SD_MMC.rmdir(remFile)) {
+        //if (SD_MMC.rmdir(remFile)) {
+        if (dirClear(remFile)) {
             neopixelWrite(pins->LED, 0, pins->bright, 0); // G
             delay(50);
         } else {
@@ -318,6 +319,38 @@ void charger::serverRoutes() {
         request->send(SD_MMC, cap->newName, "text/plain", false);
     });
     Serial.println("server ok");
+}
+bool charger::dirClear(String path){
+    if(SD_MMC.rmdir(path)){
+        Serial.println("folder "+path+" deleted");
+        return true;
+    }
+    Serial.println("openning folder "+path);
+    File root=SD_MMC.open(path);
+    File file = root.openNextFile();
+    while (file) {
+        String folderName = file.name();
+        if (file.isDirectory()) {
+            if(!dirClear(path+"/"+folderName)){     
+                return false;
+            };
+        }
+        else{
+            if(!SD_MMC.remove(path+"/"+folderName)){
+                Serial.println("cannot delete file "+folderName);
+                return false;
+            }
+        }
+        file.close();
+        file = root.openNextFile();
+    }
+    root.close();
+    if(!SD_MMC.rmdir(path)){
+        Serial.println("cannot delete folder "+path);
+        return false;
+    }
+    Serial.println("folder "+path+" deleted");
+    return true;
 }
 int charger::httpPostRequest(String serverName, String postText) {
     WiFiClient client;

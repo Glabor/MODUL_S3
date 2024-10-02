@@ -63,6 +63,7 @@ void mainRipper() {
     int transTime =preferences.getUInt("transTime",0);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
+    preferences.end();
     if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
         preferences.end();
         lora.rfSend("sleeping");
@@ -83,6 +84,7 @@ void mainRipper() {
         ind=0;
         addbyte(id);
         addbyte(82); //"R"
+        preferences.begin("prefid", false);
         add4byte(preferences.getLong("timestamp",0));
         add3byte(preferences.getLong("f1Max1",0));
         add3byte(preferences.getLong("f1Min1",0));
@@ -108,30 +110,38 @@ void mainRipper() {
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
         long timestamp=rtc.rtc.now().unixtime();
+        preferences.begin("prefid", false);
         preferences.putLong("timestamp",timestamp);
         int duration=preferences.getUInt("sleep",10);
-        
-        if(cap.ldc1->count>0){
-            cap.mesureRipper(10,"LDC1");
+        preferences.end();
+        cap.mesureRipper(10,"LDC1");
+        if(cap.ldc1->count>0){ 
+            preferences.begin("prefid", false);
             preferences.putLong("f1Max1",cap.ldc1->f1Max);
             preferences.putLong("f1Min1",cap.ldc1->f1Min);
             preferences.putLong("f1moy1",cap.ldc1->f1moy);
             preferences.putLong("f2Max1",cap.ldc1->f2Max);
             preferences.putLong("f2Min1",cap.ldc1->f2Min);
             preferences.putLong("f2moy1",cap.ldc1->f2moy);
+            preferences.end();
+            waitingtrans=true;
         }
         if(breakout == "ripperdoublev1"){
-            cap.mesureRipper(10,"LDC2");
+            cap.mesureRipper(10,"LDC2");      
             if(cap.ldc2->count>0){
-                preferences.putLong("f1Max2",cap.ldc1->f1Max);
-                preferences.putLong("f2Min2",cap.ldc1->f1Min);
-                preferences.putLong("f1moy2",cap.ldc1->f1moy);
-                preferences.putLong("f2Max2",cap.ldc1->f2Max);
-                preferences.putLong("f2Min2",cap.ldc1->f2Min);
-                preferences.putLong("f2moy2",cap.ldc1->f2moy);
+                preferences.begin("prefid", false);
+                preferences.putLong("f1Max2",cap.ldc2->f1Max);
+                preferences.putLong("f2Min2",cap.ldc2->f1Min);
+                preferences.putLong("f1moy2",cap.ldc2->f1moy);
+                preferences.putLong("f2Max2",cap.ldc2->f2Max);
+                preferences.putLong("f2Min2",cap.ldc2->f2Min);
+                preferences.putLong("f2moy2",cap.ldc2->f2moy);
+                preferences.end();
+                waitingtrans=true;
             }
         }
-        preferences.putBool("waitingtrans",true);
+        preferences.begin("prefid", false);
+        preferences.putBool("waitingtrans",waitingtrans);
         preferences.end();
         //rtc.goSleepMinuteFixe(0,transTime);
         rtc.goSleep(60);

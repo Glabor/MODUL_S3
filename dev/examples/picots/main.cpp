@@ -53,31 +53,42 @@ void mainPicot() {
     }
     bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
     float w=cap.rot->wheelRot2();
-    //randomSeed(analogRead(pins.SICK1));
-    //w=((float)random(0,2))*0.5*2*M_PI/60;
+    randomSeed(analogRead(pins.SICK1));
+    w=((float)random(0,2))*0.5*2*M_PI/60;
     float batvolt = cap.measBatt();
     rtc.log(batvolt, waitingtrans, w);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
     int transTime =preferences.getUInt("transTime",0);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
+    preferences.end();
     if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
-        preferences.end();
+        
         lora.rfSend("sleeping");
         if(waitingtrans){
-            rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
+            //rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
+            rtc.goSleep(60);
         }
         else{
-            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
+            //rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
+            rtc.goSleep(60);
         }        
     }
     pins.all_CS_high();
     if(waitingtrans){
         neopixelWrite(pins.LED, 0, 12, 0);
-        if(alg.runFromFile(preferences.getFloat("ROTSPEED",1),preferences.getUInt("RAYONMOLETTE",229),preferences.getUInt("radius",4500),preferences.getString("NEWNAME",""))){
+        preferences.begin("prefid", false);
+        preferences.putBool("waitingtrans",false);
+        float w=preferences.getFloat("ROTSPEED",1);
+        int r=preferences.getUInt("RAYONMOLETTE",229);
+        int R=preferences.getUInt("radius",4500);
+        String path=preferences.getString("NEWNAME","");
+        preferences.end();
+        if(alg.runFromFile(w,r,R,path)){
             pins.all_CS_high();
             int batt = cap.measBatt() * 100;
             ind=0;
+           preferences.begin("prefid", false);
             addbyte(id);
             addbyte(77); //"M"
             add4byte(preferences.getLong("timestamp",0));
@@ -97,25 +108,37 @@ void mainPicot() {
             for(int i=0;i<45;i++){
                 addbyte(alg.probfilb[i]);
             }
+            preferences.end();
             lora.rafale(message, ind, id);
         }
-        preferences.putBool("waitingtrans",false);
-        preferences.end();
-        rtc.goSleepHeureFixe(sleepMeas,measTime);
+        else{
+            File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+            if (logFile) {
+                logFile.println(alg.error);
+            }
+            logFile.close();
+        }
+        //rtc.goSleepHeureFixe(sleepMeas,measTime);
+        rtc.goSleep(60);
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
         cap.initSens("lsm");
         cap.initSens("sick");
         long timestamp=rtc.rtc.now().unixtime();
+        preferences.begin("prefid", false);
         preferences.putLong("timestamp",timestamp);
-        cap.mesurePicot(preferences.getUInt("sleep",60));
+        int duration=preferences.getUInt("sleep",60);
+        preferences.end();
+        cap.mesurePicot(duration);
+        preferences.begin("prefid", false);
         preferences.putString("NEWNAME",cap.newName);
         preferences.putFloat("ROTSPEED",w);
         preferences.putFloat("ROTSPEEDF",cap.wf);
         preferences.putBool("waitingtrans",true);
         preferences.end();
-        rtc.goSleepMinuteFixe(0,transTime);
+        //rtc.goSleepMinuteFixe(0,transTime);
+        rtc.goSleep(60);
     }
 }
 

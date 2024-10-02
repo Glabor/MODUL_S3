@@ -64,6 +64,7 @@ bool algo::init(float omega, unsigned long t, int r, int R)
     R_RDC = R;
     period = 2*M_PI*1000000 * float(r_molette) / abs(omega) / float(R_RDC) / nd;
     if(period<5){
+        error="period too short";
         return false;
     }
     float fs = 1000 / 1.06;//echantillonage
@@ -159,7 +160,8 @@ bool algo::runFromFile(float omega, int r, int R,String path)
         Serial.println("opening file");
     }
     else{
-        Serial.println("cannot open file");
+        error="cannot open file: "+path;
+        Serial.println(error);
         return false;
     }
     int long t0=millis();
