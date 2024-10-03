@@ -137,6 +137,9 @@ void mainPicot() {
         preferences.putFloat("ROTSPEEDF",cap.wf);
         preferences.putBool("waitingtrans",true);
         preferences.end();
+        if(transTime==measTime){
+            rtc.safeRestart();
+        }
         //rtc.goSleepMinuteFixe(0,transTime);
         rtc.goSleep(60);
     }

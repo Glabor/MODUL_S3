@@ -27,7 +27,7 @@ public:
     void mesureRipper(long senstime,String sens);
     float w0;//rotation debut mesure
     float wf;//rotation fin mesure
-    int genVar = 5;
+    int genVar = 10;
     int id = 0;
     String type = "";
     String newName = "";

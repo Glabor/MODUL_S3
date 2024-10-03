@@ -53,7 +53,11 @@ bool capteurs::lsmSetup(void) {
     dsox.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
     dsox.setGyroRange(LSM6DS_GYRO_RANGE_125_DPS);
     dsox.setGyroDataRate(LSM6DS_RATE_6_66K_HZ);
-
+    sensors_event_t event;
+    delay(200);
+    dsox.getEvent(&accel, &gyro, &temp);
+    rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
+    Serial.println("init angle: w = "+String(rot->w)+" w_raw = "+String(rot->w_raw)+" gz = "+String(gyro.gyro.z));
     return true;
 }
 
@@ -184,6 +188,7 @@ void capteurs::mesurePicot(long senstime) {
             r = 0;
         }
     }
+    wf=rot->w;
     file.flush();
     file.close();
     digitalWrite(pins->ON_SICK, LOW);
@@ -263,6 +268,7 @@ bool capteurs::initSens(String sens) {
     Serial.println(sens);
     if (sens == "lsm") {
         return lsmSetup();
+
     } else if (sens == "adxl") {
         return adxlSetup();
     }
@@ -297,6 +303,17 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(accel.acceleration.x * 100));
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
+        accBuffering((int)(gyro.gyro.x * 100));
+        accBuffering((int)(gyro.gyro.y * 100));
+        accBuffering((int)(gyro.gyro.z * 100));
+        rot->correctionangle(0.1,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
+        accBuffering((int)(rot->ax_raw * 100));
+        accBuffering((int)(rot->ay_raw * 100));
+        accBuffering((int)(rot->w_raw * 100));
+        accBuffering((int)(rot->acfx * 100));
+        accBuffering((int)(rot->acfy * 100));
+        accBuffering((int)(rot->w * 100));
+        accBuffering((int)(rot->anglef * 10));
         return;
     }
     else if (sens == "lsmGyro") {
@@ -357,7 +374,7 @@ void capteurs::getSens(String sens) {
     } else if (sens == "angle") {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
-        rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, accel.gyro.x, accel.gyro.y, accel.gyro.z, micros());
+        rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
         accBuffering((int)rot->anglef);
     } else if (sens == "LDC1") {
         if (pins->LHR_CS_1 < 0) {

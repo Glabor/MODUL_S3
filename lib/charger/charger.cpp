@@ -572,7 +572,7 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 prints["print"] = String((const char *)myObject["sleep"]).toInt();
 
                 int sleep = String((const char *)myObject["sleep"]).toInt();
-
+                cap->genVar=sleep;//measure duration pour le savesens
                 preferences->begin("prefid", false);
                 preferences->putUInt("sleep", sleep);
                 preferences->end();

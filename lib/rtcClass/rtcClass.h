@@ -92,7 +92,7 @@ public:
         while(d1<d0+TimeSpan(sleepMinutes*60)-TimeSpan(30*60)){
             d1=d1+TimeSpan(3600);
         }
-        while(d1<d0){
+        while(d1<d0+TimeSpan(60)){//5minutes minimum
             d1=d1+TimeSpan(3600);
         }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
@@ -103,6 +103,59 @@ public:
         logFile.flush();
         logFile.close();
         rtc.setAlarm1(d1, DS3231_A1_Date);
+        rtc.clearAlarm(1);
+        delay(500);
+        ESP.restart();
+    };
+    void safeRestart(){
+        rtc.setAlarm1(rtc.now() + TimeSpan(3600), DS3231_A1_Date);
+        ESP.restart();
+    }
+    void goSleep2MinuteFixe(int sleepMinutes,int minute1,int minute2){//2 crenaux de reveil
+        DateTime d0=rtc.now();
+        int seuil=min(abs(minute1-minute2),60-abs(minute1-minute2))/2+2;
+        DateTime d1=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute1, 0);
+        DateTime d2=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute2, 0);
+        DateTime d3=d0+TimeSpan(sleepMinutes*60);
+        DateTime d4;
+        bool test1=true;
+        bool test2=true;
+        while(test1&test2){
+            if(d1>d0+TimeSpan(60)){
+                if(d3>d1&&d3<=d1+TimeSpan(seuil*60)){
+                    d4=d1;
+                    test1=false;
+                }
+                if(d3<d1&&d3>=d1-TimeSpan(seuil*60)){
+                    d4=d1;
+                    test1=false;
+                }
+            }
+            if(test1){
+                d1=d1+TimeSpan(3600);
+            }
+            if(d2>d0+TimeSpan(60)){
+                if(d3>d2&&d3<=d2+TimeSpan(seuil*60)){
+                    d4=d2;
+                    test2=false;
+                }
+                if(d3<d2&&d3>=d2-TimeSpan(seuil*60)){
+                    test2=false;
+                    d4=d2;
+                }
+            }
+            if(test2){
+                d2=d2+TimeSpan(3600);
+            }
+        }
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+        if (logFile) {    
+              logFile.println("wakeup set to:") ;
+              logFile.println(dateRTC(d4)); 
+        }
+        logFile.flush();
+        logFile.close();
+        rtc.setAlarm1(d4, DS3231_A1_Date);
         rtc.clearAlarm(1);
         delay(500);
         ESP.restart();

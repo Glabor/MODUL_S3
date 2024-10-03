@@ -14,14 +14,18 @@ public:
     float updateangle(unsigned long t_new);
     float acfx;  //filtre accel
     float acfy;
+    double w=0;
+    float ax_raw;
+    float ay_raw;
+    float w_raw;
     float anglef;
     //float acfz;
 private:
+    float sign(float val);
     void applyrot(float* ax, float* ay, float* az, float* gx, float* gy, float* gz);
     float kalman_p;
     float kalman_q;
     float kalman_r;
-    double w;
     float wy;
     float wz;
     float dtt;
@@ -32,6 +36,7 @@ private:
     unsigned long tangle0;
     unsigned long t;
     float rotmat[9] ={0,0,0,0,0,0,0,0,0};
+    
 };
 #endif
 
