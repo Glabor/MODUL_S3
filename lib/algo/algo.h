@@ -52,7 +52,7 @@ private:
     int r_molette;
     int R_RDC;
     void newpic(float vPic, unsigned long tPic);
-
+    
     //int vPicMax[4 * nd];
     //unsigned long tPicMax[4 * nd];  
     unsigned long pattemp = 0;//temps d'adherence sur un degre

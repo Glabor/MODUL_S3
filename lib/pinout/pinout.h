@@ -85,7 +85,7 @@ public:
         SPI_CS_list[0]=RFM95_CS;
         SPI_CS_list[1]=ADXL375_CS;
         SPI_CS_list[2]=LHR_CS_1;
-        SPI_CS_list[3]=LHR_CS_1;
+        SPI_CS_list[3]=LHR_CS_2;
         SPI_CS_list[4]=HMCX_CS;
         SPI_CS_list[5]=HMCY_CS;
         SPI_CS_list[6]=HMCZ_CS;
