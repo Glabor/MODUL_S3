@@ -178,11 +178,12 @@ String charger::processor(const String &var) {
         return (String(idRead));
     }
     if (var == "TOOLNUM") {
-        preferences->begin("prefid", false);
+        //if(rtc->setForceWakeupDate(ssid)){}
+        /*preferences->begin("prefid", false);
         String preftoolNum = preferences->getString("toolNum", ssid);
-        preferences->end();
+        preferences->end();*/
 
-        return (String(preftoolNum));
+        return (rtc->getForceWakeupDate());
     }
     if (var == "SSID") {
         preferences->begin("prefid", false);
@@ -624,13 +625,20 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 preferences->end();
             }
             if (myObject.containsKey("toolNum")) {
-                prints["print"] = String((const char *)myObject["toolNum"]);
+                /*prints["print"] = String((const char *)myObject["toolNum"]);
 
                 String toolNum = (const char *)myObject["toolNum"];
 
                 preferences->begin("prefid", false);
                 preferences->putString("toolNum", toolNum);
-                preferences->end();
+                preferences->end();*/
+                String toolNum = (const char *)myObject["toolNum"];
+                if(rtc->setForceWakeupDate(toolNum)){
+                    prints["print"] = String((const char *)myObject["toolNum"]);
+                }
+                else{
+                    prints["print"] = "error";
+                }
             }
             if (myObject.containsKey("ssid")) {
                 prints["print"] = String((const char *)myObject["ssid"]);

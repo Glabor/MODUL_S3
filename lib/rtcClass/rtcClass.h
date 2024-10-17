@@ -184,6 +184,25 @@ public:
         ESP.restart();
         
     };
+    bool setForceWakeupDate(String s){
+        if(s.length()!=10){return false;}
+        if(s.substring(0,4).toInt()==0){return false;}
+        if(s.substring(5,7).toInt()==0){return false;}
+        if(s.substring(8).toInt()==0){return false;}
+        DateTime tmin=DateTime(s.substring(0,4).toInt(), s.substring(5,7).toInt(), s.substring(8).toInt(), 0, 0);
+        preferences->begin("prefid", false);
+        //preferences->putULong("forceWakeupDate", tmin.secondstime());
+        preferences->putULong("forceWakeupDate", tmin.unixtime());
+        preferences->end();
+        return true;
+    }
+    String getForceWakeupDate(){
+        preferences->begin("prefid", false);
+        long timestampmin=preferences->getULong("forceWakeupDate", 0);
+        preferences->end();
+        DateTime tmin=DateTime( timestampmin);
+        return String(tmin.year())+"/"+String(tmin.month())+"/"+String(tmin.day());
+    }
     void goSleep(int sleepTime) {
         Serial.println("go sleeping");
         if (rtcConnected) {
@@ -195,7 +214,16 @@ public:
         }
         ESP.restart();
     };
-
+    void goSleep40Days(){
+        preferences->begin("prefid", false);
+        unsigned long timestampmin=preferences->getULong("forceWakeupDate", 0);
+        preferences->end();
+        DateTime tmin=DateTime( timestampmin);
+        if(rtc.now()>tmin){
+            goSleep(3456000);
+        }
+        
+    }
     void syncSleep(int sleepMode, int sysID) {
         int wake0 = 1589194800;
         int wakeTime = wake0 + sysID * 30;
