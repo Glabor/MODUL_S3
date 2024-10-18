@@ -111,6 +111,7 @@ void mainRipper() {
         preferences.putLong("timestamp",timestamp);
         int duration=preferences.getUInt("sleep",10);
         preferences.end();
+        waitingtrans=true;//on transmet qqa
         cap.mesureRipper(10,"LDC1");
         if(cap.ldc1->count>0){ 
             preferences.begin("prefid", false);
@@ -121,7 +122,16 @@ void mainRipper() {
             preferences.putLong("f2Min1",cap.ldc1->f2Min);
             preferences.putLong("f2moy1",cap.ldc1->f2moy);
             preferences.end();
-            waitingtrans=true;
+        }
+        else{
+            preferences.begin("prefid", false);
+            preferences.putLong("f1Max1",-1);
+            preferences.putLong("f1Min1",-1);
+            preferences.putLong("f1moy1",-1);
+            preferences.putLong("f2Max1",-1);
+            preferences.putLong("f2Min1",-1);
+            preferences.putLong("f2moy1",-1);
+            preferences.end();
         }
         if(breakout == "ripperdoublev1"){
             cap.mesureRipper(10,"LDC2");      
@@ -134,7 +144,15 @@ void mainRipper() {
                 preferences.putLong("f2Min2",cap.ldc2->f2Min);
                 preferences.putLong("f2moy2",cap.ldc2->f2moy);
                 preferences.end();
-                waitingtrans=true;
+            }
+            else{
+                preferences.begin("prefid", false);
+                preferences.putLong("f1Max2",-1);
+                preferences.putLong("f2Min2",-1);
+                preferences.putLong("f1moy2",-1);
+                preferences.putLong("f2Max2",-1);
+                preferences.putLong("f2Min2",-1);
+                preferences.putLong("f2moy2",-1);
             }
         }
         preferences.begin("prefid", false);

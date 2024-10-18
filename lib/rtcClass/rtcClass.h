@@ -206,6 +206,13 @@ public:
     void goSleep(int sleepTime) {
         Serial.println("go sleeping");
         if (rtcConnected) {
+            File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+            if (logFile) {    
+                logFile.println("wakeup set to:") ;
+                logFile.println(dateRTC(rtc.now() + sleepTime)); 
+            }
+            logFile.flush();
+            logFile.close();
             rtc.setAlarm1(rtc.now() + sleepTime, DS3231_A1_Date);
             Serial.println("sleeping " + String(sleepTime) + "s");
             rtc.clearAlarm(1);

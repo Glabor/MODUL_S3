@@ -34,11 +34,12 @@ LDC::LDC(pinout *p,int spics,int swi)
     sw=swi;
     pins=p;
 }
-void LDC::LHRSetup()
+bool LDC::LHRSetup()
 {
     pins->all_CS_high();
     //SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
     //SPI.beginTransaction(SPISettings(100000, LSBFIRST, SPI_MODE3));
+    bool done=false;
     if(cs>=0){
         // SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
         
@@ -47,7 +48,7 @@ void LDC::LHRSetup()
         // digitalWrite(CS, HIGH);
         delay(100);
         Serial.println("setup LDC");
-
+        done=true;
         WriteRegister(0x0A, 0x001); //  INTB_MODE
         WriteRegister(0x01, 0x75); //  RP_SET
         WriteRegister(0x04, 0x03); //  DIG_CONF
@@ -59,11 +60,22 @@ void LDC::LHRSetup()
         WriteRegister(0x32, 0x00);
         WriteRegister(0x33, 0x00);
         WriteRegister(0x0B, 0x00); //  START_CONFIG
+
+        //SPI.transfer(0x01 | READ); // check response
+        uint8_t check=0;
+        check = ReadLHR_Data(0x01);
+        if(check==0){
+            Serial.println("no response from LDC");
+            //Serial.println(SPI.transfer(0x00));
+            done= false;
+        }
+        Serial.println("LDC response"+String(check));
         delay(500);
     }
-    Serial.println(" mesure2f");
-    mesure2f();
-    reset2f();
+    //Serial.println(" mesure2f");
+    //mesure2f();
+    //reset2f();
+    return done;
 }
 bool LDC::mesure2f()
 {
@@ -116,13 +128,13 @@ bool LDC::mesure2f()
         f2moy=f2sum/count2;
     }
     count=count1+count2;
-    Serial.print("f1 = ");
+    /*Serial.print("f1 = ");
     Serial.print(f1);
     Serial.print(", f2 = ");
     Serial.println(f2);
     Serial.println("setup done");
     Serial.print(count);
-    Serial.println(" mesures LDC");
+    Serial.println(" mesures LDC");*/
     delay(100);
    
     return m1&m2;

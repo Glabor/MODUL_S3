@@ -4,7 +4,7 @@
 class LDC {
     public:
     LDC(pinout *p,int spics,int swi);
-    void LHRSetup();
+    bool LHRSetup();
     bool mesure2f();
     long LHR_LSB1, LHR_MID1, LHR_MSB1,LHR_LSB2, LHR_MID2, LHR_MSB2, f1,f2;
     int count=0;
