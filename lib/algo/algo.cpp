@@ -8,6 +8,14 @@ bool algo::newval(int V, unsigned long t, float anglef)
     delta = stack.Max - stack.Min;    // amplitude of values in stack
     M=stack.Max;
     m=stack.Min;
+    if (M > usureMu)
+    { // max M ever
+        usureMu = M;
+    }
+    if (m < usuremd)
+    { // min m ever
+        usuremd = m;
+    }
     if (delta > deltaM)
     { // max amplitude ever
         deltaM = delta;
@@ -17,10 +25,7 @@ bool algo::newval(int V, unsigned long t, float anglef)
         pat1 += dt;
         nmoy++;
         usuremoyu = (M + usuremoyu * (nmoy - 1)) / nmoy; // usuremoyu = moy M
-        if (M > usureMu)
-        { // max M ever
-            usureMu = M;
-        }
+        
         if (M < usuremu)
         { // min M ever
             usuremu = M;
@@ -30,10 +35,7 @@ bool algo::newval(int V, unsigned long t, float anglef)
         { // max m ever
             usureMd = m;
         }
-        if (m < usuremd)
-        { // min m ever
-            usuremd = m;
-        }
+        
     }
     else
     {
@@ -202,7 +204,7 @@ bool algo::runFromFile(float omega, int r, int R,String path)
         }
     }
     unsigned long TIME = micros() - t0; 
-    pat1f = (float)pat1 / (float)(TIME - period * nd); // percent value of patc
+    pat1f = (float)pat1 / (float)(TIME); // percent value of patc
     inFile.close();
     compressprofil();
     return true;

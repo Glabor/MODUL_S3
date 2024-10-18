@@ -64,14 +64,12 @@ void mainPicot() {
     preferences.end();
     if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
         
-        lora.rfSend("sleeping");
+        lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));
         if(waitingtrans){
-            //rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
-            rtc.goSleep(60);
+            rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
         else{
-            //rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
-            rtc.goSleep(60);
+            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
         }        
     }
     pins.all_CS_high();
@@ -118,8 +116,7 @@ void mainPicot() {
             }
             logFile.close();
         }
-        //rtc.goSleepHeureFixe(sleepMeas,measTime);
-        rtc.goSleep(60);
+        rtc.goSleepHeureFixe(sleepMeas,measTime);
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
@@ -140,8 +137,7 @@ void mainPicot() {
         if(transTime==measTime){
             rtc.safeRestart();
         }
-        //rtc.goSleepMinuteFixe(0,transTime);
-        rtc.goSleep(60);
+        rtc.goSleepMinuteFixe(0,transTime);
     }
 }
 

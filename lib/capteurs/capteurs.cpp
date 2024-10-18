@@ -36,7 +36,7 @@ float capteurs::measBatt() {
     Serial.println(cellVolt);
     delay(1000);
     if ((cellVolt < 3.5) && (cellVolt > 0.5) && !(rtc->chg)) { // sleep for 40 days (arbitrary)
-        rtc->goSleep(21600);
+        rtc->goSleep40Days();
     }
 
     return cellVolt;

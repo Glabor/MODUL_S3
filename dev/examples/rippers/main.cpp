@@ -9,7 +9,7 @@
 #include "rtcClass.h"
 
 String cardModel = "v3.1";
-String breakout = "ripperdoublev1";
+String breakout = "rippersimplev1";
 String etrierModel="ripperL17";
 Preferences preferences;
 AsyncWebServer server(80);
@@ -66,14 +66,12 @@ void mainRipper() {
     preferences.end();
     if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
         preferences.end();
-        lora.rfSend("sleeping");
+        lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));
         if(waitingtrans){
-            //rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
-            rtc.goSleep(60);
+            rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
         else{
-            //rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
-            rtc.goSleep(60);
+            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
         }
         
     }
@@ -104,8 +102,7 @@ void mainRipper() {
         preferences.putBool("waitingtrans",false);
         preferences.end();
         lora.rafale(message, ind, id);
-        //rtc.goSleepHeureFixe(sleepMeas,measTime);
-        rtc.goSleep(60);
+        rtc.goSleepHeureFixe(sleepMeas,measTime);
     }
     else{
         neopixelWrite(pins.LED, 0, 0, 12);
@@ -146,8 +143,7 @@ void mainRipper() {
         if(transTime==measTime){
             rtc.safeRestart();
         }
-        //rtc.goSleepMinuteFixe(0,transTime);
-        rtc.goSleep(60);
+        rtc.goSleepMinuteFixe(0,transTime);
     }
 }
 void loop() {

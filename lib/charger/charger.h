@@ -85,6 +85,7 @@ private:
     int wsDelay = 100;
     bool taskDone = false;
     void callbaque(AsyncWebServerRequest *request);
+    bool testlora=false;
 };
 
 #endif

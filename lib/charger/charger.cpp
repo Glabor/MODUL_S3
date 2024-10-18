@@ -178,11 +178,12 @@ String charger::processor(const String &var) {
         return (String(idRead));
     }
     if (var == "TOOLNUM") {
-        preferences->begin("prefid", false);
+        //if(rtc->setForceWakeupDate(ssid)){}
+        /*preferences->begin("prefid", false);
         String preftoolNum = preferences->getString("toolNum", ssid);
-        preferences->end();
+        preferences->end();*/
 
-        return (String(preftoolNum));
+        return (rtc->getForceWakeupDate());
     }
     if (var == "SSID") {
         preferences->begin("prefid", false);
@@ -505,12 +506,13 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             pins->color[1] = 0.;
             pins->color[2] = pins->bright / 2;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-
+            testlora=true;
         } else if (message == "off") {
             pins->color[0] = 0.;
             pins->color[1] = pins->bright;
             pins->color[2] = pins->bright;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
+            testlora=false;
             // neopixelWrite(LED, 0, bright, bright); // cyan
         } else if (message == "alarm") {
             rtc->goSleep(cap->genVar);
@@ -623,13 +625,20 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 preferences->end();
             }
             if (myObject.containsKey("toolNum")) {
-                prints["print"] = String((const char *)myObject["toolNum"]);
+                /*prints["print"] = String((const char *)myObject["toolNum"]);
 
                 String toolNum = (const char *)myObject["toolNum"];
 
                 preferences->begin("prefid", false);
                 preferences->putString("toolNum", toolNum);
-                preferences->end();
+                preferences->end();*/
+                String toolNum = (const char *)myObject["toolNum"];
+                if(rtc->setForceWakeupDate(toolNum)){
+                    prints["print"] = String((const char *)myObject["toolNum"]);
+                }
+                else{
+                    prints["print"] = "error";
+                }
             }
             if (myObject.containsKey("ssid")) {
                 prints["print"] = String((const char *)myObject["ssid"]);
@@ -686,7 +695,16 @@ void charger::loopWS() {
     bool bBoot0Change = (digitalRead(pins->BOOT0) != bBoot0);
     bBoot0 = bBoot0Change ? !bBoot0 : bBoot0;
     prints["BOOT0"] = bBoot0 ? "ON" : "OFF";
-
+    if(testlora){
+         if (lora->rf95Setup()) {
+            byte buf[250];
+            int sendSize = 250;
+            buf[0] = highByte(2);
+            buf[1] = lowByte(2);
+            lora->rf95->send((uint8_t *)buf, sendSize);
+            lora->rf95->waitPacketSent();
+        }
+    }
     if (cap->bSick) {
         float sickMeas = analogRead(pins->SICK1);
         Serial.println(sickMeas);
@@ -702,19 +720,23 @@ void charger::loopWS() {
     if (bLDC) {
         SPI.end();
         cap->pinSetup();
-        cap->ldc1->LHRSetup();
-        cap->ldc2->LHRSetup();
+        if (pins->LHR_CS_1 >= 0) {
+            cap->ldc1->LHRSetup();
+        }
+        if (pins->LHR_CS_2 >= 0) {
+            cap->ldc2->LHRSetup();
+        }
         String result="";
         //prints["ldc"]=',';
         if (pins->LHR_CS_1 >= 0) {
             //cap->initSens("LDC1");
             cap->ldc1->mesure2f();
-            result+=String((int)cap->ldc1->f1 / 1000) + ',' +String((int)cap->ldc1->f2 / 1000)+',';
+            result+=String((int)cap->ldc1->f1 / 1000) + ',' +String((int)cap->ldc1->f2 / 1000);
         }
         if (pins->LHR_CS_2 >= 0) {
             //cap->initSens("LDC2");
             cap->ldc2->mesure2f();
-            result+=String((int)cap->ldc2->f1 / 1000) + ',' +String((int)cap->ldc2->f2 / 1000);
+            result+=','+String((int)cap->ldc2->f1 / 1000) + ',' +String((int)cap->ldc2->f2 / 1000);
         }
         prints["ldc"]=result;
     }
@@ -782,9 +804,9 @@ int charger::manageLoop() {
     if (!local) {
         // flask on
         comTO = 10;
-        pins->color[0] = pins->bright;
+        /*pins->color[0] = pins->bright;
         pins->color[1] = pins->bright / 2;
-        pins->color[2] = 0;
+        pins->color[2] = 0;*/
     } else {
         if (!rtc->chg) {
             // sleep
