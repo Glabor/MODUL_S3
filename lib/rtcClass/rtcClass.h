@@ -163,13 +163,10 @@ public:
     void goSleepHeureFixe(int sleepHour,int minute){
         DateTime t0=rtc.now();
         int h0=t0.hour();
-        int h1=h0-(h0%sleepHour)+sleepHour;
-        if(h1==24){
-            h1=0;  
-        }
+        int h1=h0-(h0%sleepHour);
         DateTime t1=DateTime(t0.year(), t0.month(), t0.day(), h1,minute, 0);
-        if(h1==0){
-            t1=t1+TimeSpan(24*60*60);
+        while(t1<t0+TimeSpan(5*60)){//5minutes minimum
+            t1=t1+TimeSpan(sleepHour*60*60);
         }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
         if (logFile) {    

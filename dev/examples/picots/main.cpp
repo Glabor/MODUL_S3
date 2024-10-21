@@ -56,12 +56,12 @@ void mainPicot() {
     randomSeed(analogRead(pins.SICK1));
     w=((float)random(0,2))*0.5*2*M_PI/60;
     float batvolt = cap.measBatt();
-    rtc.log(batvolt, waitingtrans, w);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
     int transTime =preferences.getUInt("transTime",0);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
     preferences.end();
+    rtc.log(batvolt, waitingtrans, w);
     if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
         
         lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));

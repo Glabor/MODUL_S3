@@ -60,7 +60,7 @@ void mainRipper() {
     float batvolt = cap.measBatt();
     rtc.log(batvolt, waitingtrans, w);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
-    int transTime =preferences.getUInt("transTime",0);
+    int transTime =preferences.getUInt("transTime",id);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
     preferences.end();
@@ -125,12 +125,12 @@ void mainRipper() {
         }
         else{
             preferences.begin("prefid", false);
-            preferences.putLong("f1Max1",-1);
-            preferences.putLong("f1Min1",-1);
-            preferences.putLong("f1moy1",-1);
-            preferences.putLong("f2Max1",-1);
-            preferences.putLong("f2Min1",-1);
-            preferences.putLong("f2moy1",-1);
+            preferences.putLong("f1Max1",1);
+            preferences.putLong("f1Min1",2);
+            preferences.putLong("f1moy1",3);
+            preferences.putLong("f2Max1",4);
+            preferences.putLong("f2Min1",5);
+            preferences.putLong("f2moy1",6);
             preferences.end();
         }
         if(breakout == "ripperdoublev1"){
@@ -147,12 +147,12 @@ void mainRipper() {
             }
             else{
                 preferences.begin("prefid", false);
-                preferences.putLong("f1Max2",-1);
-                preferences.putLong("f2Min2",-1);
-                preferences.putLong("f1moy2",-1);
-                preferences.putLong("f2Max2",-1);
-                preferences.putLong("f2Min2",-1);
-                preferences.putLong("f2moy2",-1);
+                preferences.putLong("f1Max2",1);
+                preferences.putLong("f2Min2",2);
+                preferences.putLong("f1moy2",3);
+                preferences.putLong("f2Max2",4);
+                preferences.putLong("f2Min2",5);
+                preferences.putLong("f2moy2",6);
             }
         }
         preferences.begin("prefid", false);
