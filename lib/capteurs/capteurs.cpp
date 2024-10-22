@@ -287,14 +287,12 @@ bool capteurs::initSens(String sens) {
         if (pins->LHR_CS_1 < 0) {
             return false;
         }
-        ldc1->LHRSetup();
-        return true;
+        return ldc1->LHRSetup();
     } else if (sens == "LDC2") {
         if (pins->LHR_CS_2 < 0) {
             return false;
         }
-        ldc2->LHRSetup();
-        return true;
+        return ldc2->LHRSetup();
     }
     return false;
 }
