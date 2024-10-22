@@ -5,10 +5,14 @@ class hw {
 public:
     hw(pinout *p);
     void measureHMR(int measTime, String sensName);
+    void ADCsetup();
+    byte *ADC_conv();
+    void Write(byte thisRegister, byte thisValue);
+    int adc1 = -1, adc2 = -1, adc3 = -1, set = -1;
+    int r = 0;
 
 private:
     pinout *pins = nullptr;
-    int adc1 = -1, adc2 = -1, adc3 = -1, set = -1;
     int result = 0x37; // register selection where the ADC result is stored
     long ADC1_result;
     long ADC2_result;
@@ -21,7 +25,6 @@ private:
     byte READ = 0b10000000;
     bool s = false;
     int count_x = 0, count_y = 0, count_z = 0;
-    int r = 0;
     long tMeas;
 
     File file;     // file with ADC data
@@ -33,10 +36,7 @@ private:
     float color[3] = {0., 0., 0.};
     float bright = 12.0;
 
-    void ADCsetup();
     unsigned char CheckStatus_ADC(byte thisRegister, int adc);
     void ReadResult_ADC(byte thisRegister, int adc);
-    void ADC_conv();
-    void Write(byte thisRegister, byte thisValue);
     void SR_pwm();
 };

@@ -416,7 +416,7 @@ int charger::sendSens(String type) {
 
     String infoPost;
     serializeJson(info, infoPost);
-    int responseCode = httpPostRequest("http://LAPTOP-TF0BBSC1:5000/sens", infoPost);
+    int responseCode = httpPostRequest(host + "/sens", infoPost);
     Serial.println(responseCode);
     if (responseCode > 0) {
         // connected flask on
@@ -533,6 +533,9 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             printInt = 0;
         } else if (message == "s_ldc") {
             bS_LDC = true;
+        } else if (message == "hmc") {
+            bHMC = !bHMC;
+            printInt = 0;
         } else if (message == "lsm") {
             bLSM = !bLSM;
             printInt = 0;
@@ -715,6 +718,50 @@ void charger::loopWS() {
         // Serial.println(String((int)cap->rot->anglef));
         prints["angle"] = String((int)cap->rot->anglef);
     }
+    if (bHMC) {
+        SPI.end();
+        cap->pinSetup();
+        cap->HW->ADCsetup();
+
+        cap->HW->r = 0;
+        digitalWrite(cap->HW->set, HIGH);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        cap->HW->ADC_conv();
+
+        digitalWrite(cap->HW->set, LOW);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        byte *dataPrint;
+        dataPrint = cap->HW->ADC_conv();
+
+        long x1, y1, z1, x2, y2, z2;
+        int i = 0;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        prints["hmc"] = String(x1 - x2) + "," + String(y1 - y2) + "," + String(z1 - z2);
+    }
     if (bLDC) {
         SPI.end();
         cap->pinSetup();
@@ -785,7 +832,7 @@ void charger::loopWS() {
         Serial.println("boot0");
     }
 
-    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC) {
+    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC || bHMC) {
         String stringPrints;
         serializeJson(prints, stringPrints);
         ws->textAll(stringPrints);

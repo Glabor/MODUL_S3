@@ -63,6 +63,7 @@ private:
     bool bLSM = false;
     bool bS_LSM = false;
     bool bAng = false;
+    bool bHMC = false;
     bool bLDC = false;
     bool bS_LDC = false;
     bool bS_ADXL = false;

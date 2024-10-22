@@ -111,7 +111,7 @@ void hw::ReadResult_ADC(byte thisRegister, int adc) {
     }
 }
 
-void hw::ADC_conv() {
+byte *hw::ADC_conv() {
     /* during conversion, gets the accelero data */
     /* checks for drdy pin and reads the result */
     drdy1 = CheckStatus_ADC(0x38, adc1); // function to check status register
@@ -131,6 +131,7 @@ void hw::ADC_conv() {
     ReadResult_ADC(result, adc1);
     ReadResult_ADC(result, adc2);
     ReadResult_ADC(result, adc3);
+    return dataBuffer;
 }
 
 void hw::SR_pwm() {
