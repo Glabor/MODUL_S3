@@ -7,3 +7,4 @@ src
 dev/sensFiles
 .vscode
 GLE
+.vscode/settings.json

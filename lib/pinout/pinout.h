@@ -7,7 +7,7 @@
 
 class pinout {
 public:
-    pinout(String model,String breakout) {
+    pinout(String model, String breakout) {
         if (model == "v3.0") {
             BOOT0 = 0;
             LED = 1;
@@ -28,7 +28,7 @@ public:
             RFM95_INT = 11;
             RFM95_CS = 12;
             battPin = 9;
-            //ledPin = 4;
+            // ledPin = 4;
             RxPin = 18;
             TxPin = 17;
 
@@ -44,7 +44,7 @@ public:
             SCL = 21;
             clk = 48;
             cmd = 37;
-          
+
             ADXL375_SCK = 42;
             ADXL375_MISO = 41;
             ADXL375_MOSI = 40;
@@ -57,40 +57,46 @@ public:
             RFM95_INT = 11;
             RFM95_CS = 12;
             battPin = 9;
-            //ledPin = 4;
+            // ledPin = 4;
             RxPin = 18;
             TxPin = 17;
-            //Ext_SPI_CS= 04;
+            // Ext_SPI_CS= 04;
             d0 = 38;
             d1 = 39;
             d2 = 35;
             d3 = 36; // GPIO 34 is not broken-out on ESP32-S3-DevKitC-1 v1.1
         }
-        if(breakout=="rippersimplev1"){
+        if (breakout == "rippersimplev1") {
             LHR_CS_1 = 4;
             LHR_SWITCH_1 = 15;
         }
-        if(breakout=="ripperdoublev1"){
+        if (breakout == "ripperdoublev1") {
             LHR_CS_1 = 4;
             LHR_SWITCH_1 = 15;
             LHR_CS_2 = 5;
             LHR_SWITCH_2 = 15;
         }
-        if(breakout=="HMCv1"){
+        if (breakout == "HMCv1") {
             HMCX_CS = 12;
             HMCY_CS = 27;
             HMCZ_CS = 33;
-            SR=0;
+            SR = 0;
         }
-        SPI_CS_list[0]=RFM95_CS;
-        SPI_CS_list[1]=ADXL375_CS;
-        SPI_CS_list[2]=LHR_CS_1;
-        SPI_CS_list[3]=LHR_CS_2;
-        SPI_CS_list[4]=HMCX_CS;
-        SPI_CS_list[5]=HMCY_CS;
-        SPI_CS_list[6]=HMCZ_CS;
+        if (breakout == "HMCv2") {
+            HMCX_CS = 5;
+            HMCY_CS = 6;
+            HMCZ_CS = 7;
+            SR = 4;
+        }
+        SPI_CS_list[0] = RFM95_CS;
+        SPI_CS_list[1] = ADXL375_CS;
+        SPI_CS_list[2] = LHR_CS_1;
+        SPI_CS_list[3] = LHR_CS_2;
+        SPI_CS_list[4] = HMCX_CS;
+        SPI_CS_list[5] = HMCY_CS;
+        SPI_CS_list[6] = HMCZ_CS;
     };
-    //int ledPin;
+    // int ledPin;
     String ledState;
     float bright = 12.0;
     float color[3] = {0., 0., 0.};
@@ -108,34 +114,34 @@ public:
     int ADXL375_SCK;
     int ADXL375_MISO;
     int ADXL375_MOSI;
-    int ADXL375_CS=-1;
+    int ADXL375_CS = -1;
     int LORA_CS;
 
     int ON_SICK;
     int SICK1;
     int RFM95_RST;
     int RFM95_INT;
-    int RFM95_CS=-1;
+    int RFM95_CS = -1;
     int battPin;
-    int RxPin; 
+    int RxPin;
     int TxPin;
 
-    int HMCX_CS=-1; 
-    int HMCY_CS=-1;
-    int HMCZ_CS=-1;
+    int HMCX_CS = -1;
+    int HMCY_CS = -1;
+    int HMCZ_CS = -1;
     int SR;
 
-    int LHR_CS_1=-1;
-    int LHR_SWITCH_1=-1;
-    int LHR_CS_2=-1;
-    int LHR_SWITCH_2=-1;
+    int LHR_CS_1 = -1;
+    int LHR_SWITCH_1 = -1;
+    int LHR_CS_2 = -1;
+    int LHR_SWITCH_2 = -1;
 
-    static const int cs_count=7;
+    static const int cs_count = 7;
     int SPI_CS_list[cs_count];
-    void all_CS_high(){
-        for(int i=0;i<cs_count;i++){
-            if(SPI_CS_list[i]>=0){
-                digitalWrite(SPI_CS_list[i],HIGH);
+    void all_CS_high() {
+        for (int i = 0; i < cs_count; i++) {
+            if (SPI_CS_list[i] >= 0) {
+                digitalWrite(SPI_CS_list[i], HIGH);
             }
         }
     }
