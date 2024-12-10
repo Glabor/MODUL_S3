@@ -53,8 +53,8 @@ void mainPicot() {
     }
     bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
     float w=cap.rot->wheelRot2();
-    randomSeed(analogRead(pins.SICK1));
-    w=((float)random(0,2))*0.5*2*M_PI/60;
+    //randomSeed(analogRead(pins.SICK1));
+    //w=((float)random(0,2))*0.5*2*M_PI/60;
     float batvolt = cap.measBatt();
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
     int transTime =preferences.getUInt("transTime",0);
@@ -89,8 +89,7 @@ void mainPicot() {
            preferences.begin("prefid", false);
             addbyte(id);
             addbyte(77); //"M"
-            add4byte(preferences.getLong("timestamp",0));
-            add2byte(batt);
+            add4byte(preferences.getLong("timestamp",0));   
             add2byte((int)preferences.getFloat("ROTSPEED",0)*100);
             add2byte((int)preferences.getFloat("ROTSPEEDF",0)*100);
             add2byte(alg.usureMu);
@@ -106,6 +105,8 @@ void mainPicot() {
             for(int i=0;i<45;i++){
                 addbyte(alg.probfilb[i]);
             }
+            add2byte((int)preferences.getFloat("rtcTemp",0)*10);
+            add2byte(batt);
             preferences.end();
             lora.rafale(message, ind, id);
         }
@@ -132,6 +133,8 @@ void mainPicot() {
         preferences.putString("NEWNAME",cap.newName);
         preferences.putFloat("ROTSPEED",w);
         preferences.putFloat("ROTSPEEDF",cap.wf);
+        float RTCtemp=rtc.rtc.getTemperature();
+        preferences.putFloat("rtcTemp",RTCtemp);
         preferences.putBool("waitingtrans",true);
         preferences.end();
         if(transTime==measTime){
