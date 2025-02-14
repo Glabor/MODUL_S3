@@ -61,7 +61,7 @@ void mainSimu() {
     if(rr==0){
         
         lora.rfSend("sleeping"+String(batt)+","+String(rtc.rtc.getTemperature()));
-        delay(2000);
+        delay(20000);
         ESP.restart();
     }
     else if(rr==1){
@@ -86,7 +86,7 @@ void mainSimu() {
         add2byte((int)rtc.rtc.getTemperature()*10);
         add2byte(batt);
         lora.rafale(message, ind, id);
-        delay(2000);
+        delay(20000);
         ESP.restart();
     }
     else if(rr>1){
@@ -110,7 +110,7 @@ void mainSimu() {
         add2byte((int)rtc.rtc.getTemperature()*10);
         add2byte(batt);
         lora.rafale(message, ind, id);
-        delay(2000);
+        delay(20000);
         ESP.restart();
     }
         

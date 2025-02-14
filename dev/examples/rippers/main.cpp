@@ -54,23 +54,25 @@ void mainRipper() {
         return;
     }
     bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
+    preferences.end();
     float w=cap.rot->wheelRot2();
     //randomSeed(analogRead(pins.SICK1));
     //w=((float)random(0,2))*0.5*2*M_PI/60;
     float batvolt = cap.measBatt();
     rtc.log(batvolt, waitingtrans, w);
+    preferences.begin("prefid", false);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
     int transTime =preferences.getUInt("transTime",id);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
     preferences.end();
-    if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
-        preferences.end();
-        lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));
+    if(abs(w)<2*M_PI/60){//rotation <1rpm
         if(waitingtrans){
+            lora.rfSend("cannot transmit "+String(abs(w)*30/M_PI)+"rpm");
             rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
         //else{
+         //   lora.rfSend("cannot measure "+String(abs(w)*30/M_PI)+"rpm");
         //    rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
         //}
         
@@ -164,6 +166,7 @@ void mainRipper() {
         if(transTime==measTime){
             rtc.safeRestart();
         }
+        lora.rfSend("measure done");
         rtc.goSleepMinuteFixe(0,transTime);
     }
 }

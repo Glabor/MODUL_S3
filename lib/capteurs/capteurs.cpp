@@ -152,6 +152,7 @@ void capteurs::mesurePicot(long senstime) {
     if (!initSens("sick")) {
         return;
     }
+    delay(10);
     digitalWrite(pins->ON_SICK, HIGH);
     w0 = rot->wheelRot2();
     String fn = getName("picot");
@@ -301,7 +302,7 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(accel.acceleration.x * 100));
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
-        accBuffering((int)(gyro.gyro.x * 100));
+        /*accBuffering((int)(gyro.gyro.x * 100));
         accBuffering((int)(gyro.gyro.y * 100));
         accBuffering((int)(gyro.gyro.z * 100));
         rot->correctionangle(0.1,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
@@ -311,7 +312,7 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(rot->acfx * 100));
         accBuffering((int)(rot->acfy * 100));
         accBuffering((int)(rot->w * 100));
-        accBuffering((int)(rot->anglef * 10));
+        accBuffering((int)(rot->anglef * 10));*/
         return;
     }
     else if (sens == "lsmGyro") {
