@@ -178,7 +178,7 @@ String charger::processor(const String &var) {
         return (String(idRead));
     }
     if (var == "TOOLNUM") {
-        //if(rtc->setForceWakeupDate(ssid)){}
+        // if(rtc->setForceWakeupDate(ssid)){}
         /*preferences->begin("prefid", false);
         String preftoolNum = preferences->getString("toolNum", ssid);
         preferences->end();*/
@@ -302,7 +302,7 @@ void charger::serverRoutes() {
             Serial.println("------");
             remFile = p->value();
         }
-        //if (SD_MMC.rmdir(remFile)) {
+        // if (SD_MMC.rmdir(remFile)) {
         if (dirClear(remFile)) {
             neopixelWrite(pins->LED, 0, pins->bright, 0); // G
             delay(50);
@@ -321,24 +321,23 @@ void charger::serverRoutes() {
     });
     Serial.println("server ok");
 }
-bool charger::dirClear(String path){
-    if(SD_MMC.rmdir(path)){
-        Serial.println("folder "+path+" deleted");
+bool charger::dirClear(String path) {
+    if (SD_MMC.rmdir(path)) {
+        Serial.println("folder " + path + " deleted");
         return true;
     }
-    Serial.println("openning folder "+path);
-    File root=SD_MMC.open(path);
+    Serial.println("openning folder " + path);
+    File root = SD_MMC.open(path);
     File file = root.openNextFile();
     while (file) {
         String folderName = file.name();
         if (file.isDirectory()) {
-            if(!dirClear(path+"/"+folderName)){     
+            if (!dirClear(path + "/" + folderName)) {
                 return false;
             };
-        }
-        else{
-            if(!SD_MMC.remove(path+"/"+folderName)){
-                Serial.println("cannot delete file "+folderName);
+        } else {
+            if (!SD_MMC.remove(path + "/" + folderName)) {
+                Serial.println("cannot delete file " + folderName);
                 return false;
             }
         }
@@ -346,11 +345,11 @@ bool charger::dirClear(String path){
         file = root.openNextFile();
     }
     root.close();
-    if(!SD_MMC.rmdir(path)){
-        Serial.println("cannot delete folder "+path);
+    if (!SD_MMC.rmdir(path)) {
+        Serial.println("cannot delete folder " + path);
         return false;
     }
-    Serial.println("folder "+path+" deleted");
+    Serial.println("folder " + path + " deleted");
     return true;
 }
 int charger::httpPostRequest(String serverName, String postText) {
@@ -417,7 +416,7 @@ int charger::sendSens(String type) {
 
     String infoPost;
     serializeJson(info, infoPost);
-    int responseCode = httpPostRequest("http://LAPTOP-TF0BBSC1:5000/sens", infoPost);
+    int responseCode = httpPostRequest(host + "/sens", infoPost);
     Serial.println(responseCode);
     if (responseCode > 0) {
         // connected flask on
@@ -506,13 +505,13 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             pins->color[1] = 0.;
             pins->color[2] = pins->bright / 2;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-            testlora=true;
+            testlora = true;
         } else if (message == "off") {
             pins->color[0] = 0.;
             pins->color[1] = pins->bright;
             pins->color[2] = pins->bright;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-            testlora=false;
+            testlora = false;
             // neopixelWrite(LED, 0, bright, bright); // cyan
         } else if (message == "alarm") {
             rtc->goSleep(cap->genVar);
@@ -534,6 +533,9 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             printInt = 0;
         } else if (message == "s_ldc") {
             bS_LDC = true;
+        } else if (message == "hmc") {
+            bHMC = !bHMC;
+            printInt = 0;
         } else if (message == "lsm") {
             bLSM = !bLSM;
             printInt = 0;
@@ -574,7 +576,7 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 prints["print"] = String((const char *)myObject["sleep"]).toInt();
 
                 int sleep = String((const char *)myObject["sleep"]).toInt();
-                cap->genVar=sleep;//measure duration pour le savesens
+                cap->genVar = sleep; // measure duration pour le savesens
                 preferences->begin("prefid", false);
                 preferences->putUInt("sleep", sleep);
                 preferences->end();
@@ -633,10 +635,9 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 preferences->putString("toolNum", toolNum);
                 preferences->end();*/
                 String toolNum = (const char *)myObject["toolNum"];
-                if(rtc->setForceWakeupDate(toolNum)){
+                if (rtc->setForceWakeupDate(toolNum)) {
                     prints["print"] = String((const char *)myObject["toolNum"]);
-                }
-                else{
+                } else {
                     prints["print"] = "error";
                 }
             }
@@ -695,8 +696,8 @@ void charger::loopWS() {
     bool bBoot0Change = (digitalRead(pins->BOOT0) != bBoot0);
     bBoot0 = bBoot0Change ? !bBoot0 : bBoot0;
     prints["BOOT0"] = bBoot0 ? "ON" : "OFF";
-    if(testlora){
-         if (lora->rf95Setup()) {
+    if (testlora) {
+        if (lora->rf95Setup()) {
             byte buf[250];
             int sendSize = 250;
             buf[0] = highByte(2);
@@ -717,6 +718,50 @@ void charger::loopWS() {
         // Serial.println(String((int)cap->rot->anglef));
         prints["angle"] = String((int)cap->rot->anglef);
     }
+    if (bHMC) {
+        SPI.end();
+        cap->pinSetup();
+        cap->HW->ADCsetup();
+
+        cap->HW->r = 0;
+        digitalWrite(cap->HW->set, HIGH);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        cap->HW->ADC_conv();
+
+        digitalWrite(cap->HW->set, LOW);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        byte *dataPrint;
+        dataPrint = cap->HW->ADC_conv();
+
+        long x1, y1, z1, x2, y2, z2;
+        int i = 0;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        prints["hmc"] = String(x1 - x2) + "," + String(y1 - y2) + "," + String(z1 - z2);
+    }
     if (bLDC) {
         SPI.end();
         cap->pinSetup();
@@ -726,19 +771,19 @@ void charger::loopWS() {
         if (pins->LHR_CS_2 >= 0) {
             cap->ldc2->LHRSetup();
         }
-        String result="";
-        //prints["ldc"]=',';
+        String result = "";
+        // prints["ldc"]=',';
         if (pins->LHR_CS_1 >= 0) {
-            //cap->initSens("LDC1");
+            // cap->initSens("LDC1");
             cap->ldc1->mesure2f();
-            result+=String((int)cap->ldc1->f1 / 1000) + ',' +String((int)cap->ldc1->f2 / 1000);
+            result += String((int)cap->ldc1->f1 / 1000) + ',' + String((int)cap->ldc1->f2 / 1000);
         }
         if (pins->LHR_CS_2 >= 0) {
-            //cap->initSens("LDC2");
+            // cap->initSens("LDC2");
             cap->ldc2->mesure2f();
-            result+=','+String((int)cap->ldc2->f1 / 1000) + ',' +String((int)cap->ldc2->f2 / 1000);
+            result += ',' + String((int)cap->ldc2->f1 / 1000) + ',' + String((int)cap->ldc2->f2 / 1000);
         }
-        prints["ldc"]=result;
+        prints["ldc"] = result;
     }
     if (bS_LDC) {
         cap->saveSens("LDC1", cap->genVar);
@@ -787,7 +832,7 @@ void charger::loopWS() {
         Serial.println("boot0");
     }
 
-    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC) {
+    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC || bHMC) {
         String stringPrints;
         serializeJson(prints, stringPrints);
         ws->textAll(stringPrints);
@@ -813,7 +858,7 @@ int charger::manageLoop() {
             preferences->begin("prefid", false);
             int idRead = preferences->getUInt("sleepNoMeas", 33);
             preferences->end();
-            rtc->goSleep(idRead);
+            rtc->goSleep(idRead * 60);
         } else {
             // listen local
             comTO = 60;

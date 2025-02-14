@@ -48,8 +48,8 @@ private:
     bool dirClear(String path);
 
     // Replace with your network credentials
-    String ssid = "GL-AR300M-c40";
-    String password = "goodlife";
+    String ssid = "SENSAR_OSLO";
+    String password = "12345678";
 
     String soft_ap_ssid = "MyESP32AP";
     String soft_ap_password = "testpassword";
@@ -63,6 +63,7 @@ private:
     bool bLSM = false;
     bool bS_LSM = false;
     bool bAng = false;
+    bool bHMC = false;
     bool bLDC = false;
     bool bS_LDC = false;
     bool bS_ADXL = false;
@@ -85,7 +86,7 @@ private:
     int wsDelay = 100;
     bool taskDone = false;
     void callbaque(AsyncWebServerRequest *request);
-    bool testlora=false;
+    bool testlora = false;
 };
 
 #endif
