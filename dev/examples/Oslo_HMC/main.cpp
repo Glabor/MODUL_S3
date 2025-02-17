@@ -46,13 +46,21 @@ void mainHMC() {
     // charge.sendSens("start");
     cap.type = "hmc";
     String sensName = cap.getName(cap.type);
-    int measTime = 10;
+    int measTime = 120;
     cap.HW->measureHMR(measTime, sensName);
     cap.newName = sensName;
     if (charge.wifiConnect()) {
         charge.sendSens(cap.type);
     }
-    delay(2000);
+    delay(4000);
+    WiFi.disconnect(true);
+
+    cap.type = "adxl";
+    cap.saveSens(cap.type, 20);
+    if (charge.wifiConnect()) {
+        charge.sendSens(cap.type);
+    }
+    delay(4000);
     WiFi.disconnect(true);
 }
 

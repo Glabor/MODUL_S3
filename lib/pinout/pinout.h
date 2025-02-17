@@ -215,6 +215,9 @@ public:
             delay(500);
             return false;
         }
+        Serial.printf("Total space: %lluMB\n", SD_MMC.totalBytes() / (1024 * 1024));
+        Serial.printf("Used space: %lluMB\n", SD_MMC.usedBytes() / (1024 * 1024));
+
         return true;
     }
 };

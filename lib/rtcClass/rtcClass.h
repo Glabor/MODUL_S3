@@ -7,7 +7,7 @@
 class rtcClass {
 public:
     Preferences *preferences;
-    rtcClass(Preferences *pr,fs::FS &f) {
+    rtcClass(Preferences *pr, fs::FS &f) {
         preferences = pr;
         fs = &f;
     };
@@ -55,8 +55,8 @@ public:
         dateString += String(dateDate.second(), DEC);
         return dateString;
     }
-    void log(float batvolt,bool waitingtrans,float w){
-        float RTCtemp=rtc.getTemperature();
+    void log(float batvolt, bool waitingtrans = false, float w = 0) {
+        float RTCtemp = rtc.getTemperature();
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
         if (logFile) {
             logFile.print("\n");
@@ -68,17 +68,17 @@ public:
             logFile.print("RTC temp: ");
             logFile.println(String(RTCtemp));
             logFile.print("RDC speed: ");
-            logFile.print(String(w/2/M_PI*60));
+            logFile.print(String(w / 2 / M_PI * 60));
             logFile.println("rpm");
-            if(abs(w)<0.1*2*M_PI/60){logFile.println("back to sleep");}
-            else{
-                if(waitingtrans){
+            if (abs(w) < 0.1 * 2 * M_PI / 60) {
+                logFile.println("back to sleep");
+            } else {
+                if (waitingtrans) {
                     preferences->begin("prefid", false);
                     logFile.print("begin transmission: ");
-                    logFile.println(preferences->getString("NEWNAME",""));
+                    logFile.println(preferences->getString("NEWNAME", ""));
                     preferences->end();
-                }
-                else{
+                } else {
                     logFile.println("begin measurement");
                 }
             }
@@ -86,19 +86,19 @@ public:
         logFile.flush();
         logFile.close();
     }
-    void goSleepMinuteFixe(int sleepMinutes,int minute){
-        DateTime d0=rtc.now();
-        DateTime d1=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute, 0);
-        while(d1<d0+TimeSpan(sleepMinutes*60)-TimeSpan(30*60)){
-            d1=d1+TimeSpan(3600);
+    void goSleepMinuteFixe(int sleepMinutes, int minute) {
+        DateTime d0 = rtc.now();
+        DateTime d1 = DateTime(d0.year(), d0.month(), d0.day(), d0.hour(), minute, 0);
+        while (d1 < d0 + TimeSpan(sleepMinutes * 60) - TimeSpan(30 * 60)) {
+            d1 = d1 + TimeSpan(3600);
         }
-        while(d1<d0+TimeSpan(60)){//5minutes minimum
-            d1=d1+TimeSpan(3600);
+        while (d1 < d0 + TimeSpan(60)) { // 5minutes minimum
+            d1 = d1 + TimeSpan(3600);
         }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
-        if (logFile) {    
-              logFile.println("wakeup set to:") ;
-              logFile.println(dateRTC(d1)); 
+        if (logFile) {
+            logFile.println("wakeup set to:");
+            logFile.println(dateRTC(d1));
         }
         logFile.flush();
         logFile.close();
@@ -107,51 +107,51 @@ public:
         delay(500);
         ESP.restart();
     };
-    void safeRestart(){
+    void safeRestart() {
         rtc.setAlarm1(rtc.now() + TimeSpan(3600), DS3231_A1_Date);
         ESP.restart();
     }
-    void goSleep2MinuteFixe(int sleepMinutes,int minute1,int minute2){//2 crenaux de reveil
-        DateTime d0=rtc.now();
-        int seuil=min(abs(minute1-minute2),60-abs(minute1-minute2))/2+2;
-        DateTime d1=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute1, 0);
-        DateTime d2=DateTime(d0.year(), d0.month(), d0.day(), d0.hour(),minute2, 0);
-        DateTime d3=d0+TimeSpan(sleepMinutes*60);
+    void goSleep2MinuteFixe(int sleepMinutes, int minute1, int minute2) { // 2 crenaux de reveil
+        DateTime d0 = rtc.now();
+        int seuil = min(abs(minute1 - minute2), 60 - abs(minute1 - minute2)) / 2 + 2;
+        DateTime d1 = DateTime(d0.year(), d0.month(), d0.day(), d0.hour(), minute1, 0);
+        DateTime d2 = DateTime(d0.year(), d0.month(), d0.day(), d0.hour(), minute2, 0);
+        DateTime d3 = d0 + TimeSpan(sleepMinutes * 60);
         DateTime d4;
-        bool test1=true;
-        bool test2=true;
-        while(test1&test2){
-            if(d1>d0+TimeSpan(60)){
-                if(d3>d1&&d3<=d1+TimeSpan(seuil*60)){
-                    d4=d1;
-                    test1=false;
+        bool test1 = true;
+        bool test2 = true;
+        while (test1 & test2) {
+            if (d1 > d0 + TimeSpan(60)) {
+                if (d3 > d1 && d3 <= d1 + TimeSpan(seuil * 60)) {
+                    d4 = d1;
+                    test1 = false;
                 }
-                if(d3<d1&&d3>=d1-TimeSpan(seuil*60)){
-                    d4=d1;
-                    test1=false;
-                }
-            }
-            if(test1){
-                d1=d1+TimeSpan(3600);
-            }
-            if(d2>d0+TimeSpan(60)){
-                if(d3>d2&&d3<=d2+TimeSpan(seuil*60)){
-                    d4=d2;
-                    test2=false;
-                }
-                if(d3<d2&&d3>=d2-TimeSpan(seuil*60)){
-                    test2=false;
-                    d4=d2;
+                if (d3 < d1 && d3 >= d1 - TimeSpan(seuil * 60)) {
+                    d4 = d1;
+                    test1 = false;
                 }
             }
-            if(test2){
-                d2=d2+TimeSpan(3600);
+            if (test1) {
+                d1 = d1 + TimeSpan(3600);
+            }
+            if (d2 > d0 + TimeSpan(60)) {
+                if (d3 > d2 && d3 <= d2 + TimeSpan(seuil * 60)) {
+                    d4 = d2;
+                    test2 = false;
+                }
+                if (d3 < d2 && d3 >= d2 - TimeSpan(seuil * 60)) {
+                    test2 = false;
+                    d4 = d2;
+                }
+            }
+            if (test2) {
+                d2 = d2 + TimeSpan(3600);
             }
         }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
-        if (logFile) {    
-              logFile.println("wakeup set to:") ;
-              logFile.println(dateRTC(d4)); 
+        if (logFile) {
+            logFile.println("wakeup set to:");
+            logFile.println(dateRTC(d4));
         }
         logFile.flush();
         logFile.close();
@@ -160,18 +160,18 @@ public:
         delay(500);
         ESP.restart();
     };
-    void goSleepHeureFixe(int sleepHour,int minute){
-        DateTime t0=rtc.now();
-        int h0=t0.hour();
-        int h1=h0-(h0%sleepHour);
-        DateTime t1=DateTime(t0.year(), t0.month(), t0.day(), h1,minute, 0);
-        while(t1<t0+TimeSpan(5*60)){//5minutes minimum
-            t1=t1+TimeSpan(sleepHour*60*60);
+    void goSleepHeureFixe(int sleepHour, int minute) {
+        DateTime t0 = rtc.now();
+        int h0 = t0.hour();
+        int h1 = h0 - (h0 % sleepHour);
+        DateTime t1 = DateTime(t0.year(), t0.month(), t0.day(), h1, minute, 0);
+        while (t1 < t0 + TimeSpan(5 * 60)) { // 5minutes minimum
+            t1 = t1 + TimeSpan(sleepHour * 60 * 60);
         }
         File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
-        if (logFile) {    
-              logFile.println("wakeup set to:") ;
-              logFile.println(dateRTC(t1)); 
+        if (logFile) {
+            logFile.println("wakeup set to:");
+            logFile.println(dateRTC(t1));
         }
         logFile.flush();
         logFile.close();
@@ -179,34 +179,41 @@ public:
         rtc.clearAlarm(1);
         delay(500);
         ESP.restart();
-        
     };
-    bool setForceWakeupDate(String s){
-        if(s.length()!=10){return false;}
-        if(s.substring(0,4).toInt()==0){return false;}
-        if(s.substring(5,7).toInt()==0){return false;}
-        if(s.substring(8).toInt()==0){return false;}
-        DateTime tmin=DateTime(s.substring(0,4).toInt(), s.substring(5,7).toInt(), s.substring(8).toInt(), 0, 0);
+    bool setForceWakeupDate(String s) {
+        if (s.length() != 10) {
+            return false;
+        }
+        if (s.substring(0, 4).toInt() == 0) {
+            return false;
+        }
+        if (s.substring(5, 7).toInt() == 0) {
+            return false;
+        }
+        if (s.substring(8).toInt() == 0) {
+            return false;
+        }
+        DateTime tmin = DateTime(s.substring(0, 4).toInt(), s.substring(5, 7).toInt(), s.substring(8).toInt(), 0, 0);
         preferences->begin("prefid", false);
-        //preferences->putULong("forceWakeupDate", tmin.secondstime());
+        // preferences->putULong("forceWakeupDate", tmin.secondstime());
         preferences->putULong("forceWakeupDate", tmin.unixtime());
         preferences->end();
         return true;
     }
-    String getForceWakeupDate(){
+    String getForceWakeupDate() {
         preferences->begin("prefid", false);
-        long timestampmin=preferences->getULong("forceWakeupDate", 0);
+        long timestampmin = preferences->getULong("forceWakeupDate", 0);
         preferences->end();
-        DateTime tmin=DateTime( timestampmin);
-        return String(tmin.year())+"/"+String(tmin.month())+"/"+String(tmin.day());
+        DateTime tmin = DateTime(timestampmin);
+        return String(tmin.year()) + "/" + String(tmin.month()) + "/" + String(tmin.day());
     }
     void goSleep(int sleepTime) {
         Serial.println("go sleeping");
         if (rtcConnected) {
             File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
-            if (logFile) {    
-                logFile.println("wakeup set to:") ;
-                logFile.println(dateRTC(rtc.now() + sleepTime)); 
+            if (logFile) {
+                logFile.println("wakeup set to:");
+                logFile.println(dateRTC(rtc.now() + sleepTime));
             }
             logFile.flush();
             logFile.close();
@@ -218,15 +225,14 @@ public:
         }
         ESP.restart();
     };
-    void goSleep40Days(){
+    void goSleep40Days() {
         preferences->begin("prefid", false);
-        unsigned long timestampmin=preferences->getULong("forceWakeupDate", 0);
+        unsigned long timestampmin = preferences->getULong("forceWakeupDate", 0);
         preferences->end();
-        DateTime tmin=DateTime( timestampmin);
-        if(rtc.now()>tmin){
+        DateTime tmin = DateTime(timestampmin);
+        if (rtc.now() > tmin) {
             goSleep(3456000);
         }
-        
     }
     void syncSleep(int sleepMode, int sysID) {
         int wake0 = 1589194800;

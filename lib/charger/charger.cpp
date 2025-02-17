@@ -455,6 +455,21 @@ bool charger::wifiConnect() {
     // Connect to Wi-Fi
     int count1 = 0;
     int count2 = 0;
+
+    preferences->begin("prefid", false);
+    int idRead = preferences->getUInt("id", 0);
+    preferences->end();
+
+    if (ssid == "SENSAR_OSLO") {
+        Serial.println("Static Local IP : 192.168.216." + String(idRead));
+        IPAddress local_IP(192, 168, 216, idRead); // Set the desired IP
+        IPAddress gateway(192, 168, 216, 77);      // Set the gateway IP
+        IPAddress subnet(255, 255, 255, 0);        // Set the subnet mask
+        // Configure the ESP32 to use a static IP
+        if (!WiFi.config(local_IP, gateway, subnet)) {
+            Serial.println("Static IP configuration failed.");
+        }
+    }
     Serial.print("Connecting Wifi : ");
     Serial.println(ssid);
     WiFi.mode(WIFI_MODE_APSTA);
@@ -472,6 +487,7 @@ bool charger::wifiConnect() {
                 delay(200);
                 Serial.println("Connecting to WiFi..");
             }
+            count2 = 0;
             if (WiFi.status() == WL_CONNECTED) {
                 neopixelWrite(pins->LED, 0, pins->bright, 0); // G
                 Serial.println(WiFi.localIP());
@@ -527,6 +543,9 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             Serial.println("wifi");
         } else if (message == "angle") {
             bAng = !bAng;
+            printInt = 0;
+        } else if (message == "RSSI") {
+            bRSSI = !bRSSI;
             printInt = 0;
         } else if (message == "ldc") {
             bLDC = !bLDC;
@@ -718,6 +737,9 @@ void charger::loopWS() {
         // Serial.println(String((int)cap->rot->anglef));
         prints["angle"] = String((int)cap->rot->anglef);
     }
+    if (bRSSI) {
+        prints["RSSI"] = String(WiFi.RSSI());
+    }
     if (bHMC) {
         SPI.end();
         cap->pinSetup();
@@ -832,7 +854,7 @@ void charger::loopWS() {
         Serial.println("boot0");
     }
 
-    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC || bHMC) {
+    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC || bHMC || bRSSI) {
         String stringPrints;
         serializeJson(prints, stringPrints);
         ws->textAll(stringPrints);
