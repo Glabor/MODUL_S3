@@ -1,0 +1,6 @@
+sick:
+usb vers le haut
+lora vers la gauche
+ripper:
+usb vers l'avant
+lora vers la droite

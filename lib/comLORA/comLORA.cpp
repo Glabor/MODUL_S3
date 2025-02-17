@@ -85,8 +85,8 @@ void comLORA::rafale(byte *message, int length, int id) {
     bool stopBool = false;
     rf95Setup();
     cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
-    cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z,micros());
-
+    cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z,micros());
+    int ns=0;
     while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
         /*if (cap->accel.acceleration.x != 0) {
@@ -95,7 +95,7 @@ void comLORA::rafale(byte *message, int length, int id) {
         {
             alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
         }*/
-        float alpha_deg =cap->rot->correctionangle(0.1,cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z,micros());
+        float alpha_deg =cap->rot->correctionangle(0.1,cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z,micros());
         if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
             turnNumber--;
         }
@@ -104,9 +104,9 @@ void comLORA::rafale(byte *message, int length, int id) {
         }
         prevAng = alpha_deg;
         angle = (int)(alpha_deg * 100);
-        Serial.print(angle);
+        /*Serial.print(angle);
         Serial.print(",");
-        Serial.println(turnNumber);
+        Serial.println(turnNumber);*/
 
         if (rf95->available())
         // receive to check if confirmation is sent
@@ -133,9 +133,11 @@ void comLORA::rafale(byte *message, int length, int id) {
             message[index++] = highByte(angle);
             message[index++] = lowByte(turnNumber);
             rf95->send(message, length + 3);
+            ns++;
             rf95->waitPacketSent();
-            Serial.println("sent");
+            //Serial.println("sent");
             sentTime = millis();
         }
     }
+    Serial.println("rafale ended: "+String(ns)+" messages sent");
 }
