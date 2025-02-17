@@ -7,7 +7,7 @@
 #include "comLORA.h"
 #include "pinout.h"
 #include "rtcClass.h"
-#include "algo.h"
+#include "algoPicots.h"
 String cardModel = "v3.1";
 String breakout = "";
 String etrierModel="etrier17";
@@ -20,7 +20,7 @@ rtcClass rtc(&preferences,SD_MMC);
 capteurs cap(&pins, &rtc, SD_MMC, &preferences,etrierModel);
 comLORA lora(&pins, &cap,&preferences);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
-algo alg;
+algoPicots alg;
 void setup() {
     Serial.begin(115200);
     Serial.println("begin");
@@ -54,8 +54,8 @@ void mainPicot() {
     bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
     preferences.end();
     float w=cap.rot->wheelRot2();
-    //randomSeed(analogRead(pins.SICK1));
-    //w=((float)random(0,2))*4*M_PI/60;
+    randomSeed(analogRead(pins.SICK1));
+    w=((float)random(0,2))*4*M_PI/60;
     float batvolt = cap.measBatt();
     preferences.begin("prefid", false);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
@@ -68,11 +68,13 @@ void mainPicot() {
         
         lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));
         if(waitingtrans){
+            lora.rfSend("cannot transmit "+String(abs(w)*30/M_PI)+"rpm");
             rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
         else{
-            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
-        }        
+           lora.rfSend("cannot measure "+String(abs(w)*30/M_PI)+"rpm");
+           rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
+        }    
     }
     pins.all_CS_high();
     if(waitingtrans){
@@ -94,18 +96,18 @@ void mainPicot() {
             add4byte(preferences.getLong("timestamp",0));   
             add2byte((int)(preferences.getFloat("ROTSPEED",0)*100));
             add2byte((int)(preferences.getFloat("ROTSPEEDF",0)*100));
-            add2byte(alg.usureMu);
-            add2byte(alg.usuremu);
-            add2byte((int)alg.usuremoyu);
-            add2byte(alg.usureMd);
-            add2byte(alg.usuremd);
-            add2byte((int)alg.usuremoyd);
-            addbyte( (byte) (alg.pat1f*100));
-            addbyte( (byte) alg.nPic);
-            addbyte( (byte) alg.mincor);
-            add2byte( lowByte((int)alg.minsum));
+            add2byte(alg.usure->usureMu);
+            add2byte(alg.usure->usuremu);
+            add2byte((int)alg.usure->usuremoyu);
+            add2byte(alg.usure->usureMd);
+            add2byte(alg.usure->usuremd);
+            add2byte((int)alg.usure->usuremoyd);
+            addbyte( (byte) (alg.patinage->pat1f*100));
+            addbyte( (byte) alg.comptage->nPic);
+            addbyte( (byte) alg.comptage->mincor);
+            add2byte( lowByte((int)alg.comptage->minsum));
             for(int i=0;i<45;i++){
-                addbyte(alg.probfilb[i]);
+                addbyte(alg.patinage->probfilb[i]);
             }
             add2byte((int)(preferences.getFloat("rtcTemp",0)*10));
             add2byte(batt);
@@ -118,6 +120,7 @@ void mainPicot() {
                 logFile.println(alg.error);
             }
             logFile.close();
+            lora.rfSend(alg.error);
         }
         rtc.goSleepHeureFixe(sleepMeas,measTime);
     }
@@ -142,6 +145,7 @@ void mainPicot() {
         if(transTime==measTime){
             rtc.safeRestart();
         }
+        lora.rfSend("measure done");
         rtc.goSleepMinuteFixe(0,transTime);
     }
 }

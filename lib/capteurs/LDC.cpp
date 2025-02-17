@@ -135,7 +135,7 @@ bool LDC::mesure2f()
     Serial.println("setup done");
     Serial.print(count);
     Serial.println(" mesures LDC");*/
-    delay(100);
+    //delay(100);
    
     return m1&m2;
 }

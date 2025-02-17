@@ -70,9 +70,10 @@ public:
             logFile.print("RDC speed: ");
             logFile.print(String(w / 2 / M_PI * 60));
             logFile.println("rpm");
-            if (abs(w) < 0.1 * 2 * M_PI / 60) {
+            if (abs(w) < M_PI / 60) {
                 logFile.println("back to sleep");
-            } else {
+            } // 0.5RPM
+            else {
                 if (waitingtrans) {
                     preferences->begin("prefid", false);
                     logFile.print("begin transmission: ");

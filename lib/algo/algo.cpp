@@ -203,7 +203,7 @@ bool algo::runFromFile(float omega, int r, int R,String path)
             Serial.println(j);
         }
     }
-    unsigned long TIME = micros() - t0; 
+    unsigned long TIME = t - t0; 
     pat1f = (float)pat1 / (float)(TIME); // percent value of patc
     inFile.close();
     compressprofil();

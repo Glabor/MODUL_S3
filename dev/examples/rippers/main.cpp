@@ -42,7 +42,7 @@ void setup() {
 }
 byte message[100];
 int ind;
-#define addbyte(val){ message[ind]=val; ind++;}
+#define addbyte(val){ message[ind]=(byte)val; ind++;}
 #define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
 #define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
 #define add4byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++; message[ind]=lowByte(val>>24); ind++;}
@@ -54,25 +54,27 @@ void mainRipper() {
         return;
     }
     bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
+    preferences.end();
     float w=cap.rot->wheelRot2();
-    randomSeed(analogRead(pins.SICK1));
-    w=((float)random(0,2))*0.5*2*M_PI/60;
+    //randomSeed(analogRead(pins.SICK1));
+    //w=((float)random(0,2))*0.5*2*M_PI/60;
     float batvolt = cap.measBatt();
     rtc.log(batvolt, waitingtrans, w);
+    preferences.begin("prefid", false);
     int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
     int transTime =preferences.getUInt("transTime",id);
     int measTime =preferences.getUInt("measTime",0);
     int sleepMeas =preferences.getUInt("sleepMeas",8);
     preferences.end();
-    if(abs(w)<0.1*2*M_PI/60){//rotation <0.1rpm
-        preferences.end();
-        lora.rfSend("sleeping"+String(batvolt)+","+String(rtc.rtc.getTemperature()));
+    if(abs(w)<2*M_PI/60){//rotation <1rpm
         if(waitingtrans){
+            lora.rfSend("cannot transmit "+String(abs(w)*30/M_PI)+"rpm");
             rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
         }
-        else{
-            rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
-        }
+        //else{
+         //   lora.rfSend("cannot measure "+String(abs(w)*30/M_PI)+"rpm");
+        //    rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
+        //}
         
     }
     pins.all_CS_high();
@@ -98,6 +100,7 @@ void mainRipper() {
             add3byte(preferences.getLong("f2Min2",0));
             add3byte(preferences.getLong("f2moy2",0));
         }
+        add2byte((int)preferences.getFloat("rtcTemp",0)*10);
         add2byte(batt);
         preferences.putBool("waitingtrans",false);
         preferences.end();
@@ -113,6 +116,7 @@ void mainRipper() {
         preferences.end();
         waitingtrans=true;//on transmet qqa
         cap.mesureRipper(10,"LDC1");
+        float RTCtemp=rtc.rtc.getTemperature();
         if(cap.ldc1->count>0){ 
             preferences.begin("prefid", false);
             preferences.putLong("f1Max1",cap.ldc1->f1Max);
@@ -156,11 +160,13 @@ void mainRipper() {
             }
         }
         preferences.begin("prefid", false);
+        preferences.putFloat("rtcTemp",RTCtemp);
         preferences.putBool("waitingtrans",waitingtrans);
         preferences.end();
         if(transTime==measTime){
             rtc.safeRestart();
         }
+        lora.rfSend("measure done");
         rtc.goSleepMinuteFixe(0,transTime);
     }
 }

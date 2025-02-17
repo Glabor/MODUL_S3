@@ -83,9 +83,12 @@ float angle::wheelRot2(void) {
     unsigned long micro0 = micros();
     dsox->getEvent(&accel, &gyro, &temp);
     initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,micro0);
+    int nba=1;
     while (micros() - micro0 < sampleTime*1000) {
         dsox->getEvent(&accel, &gyro, &temp);
-        anglef=correctionangle(0.1,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros() );
+        nba++;
+        float alpha=std::max(0.01,1.0/float(nba));
+        anglef=correctionangle(alpha,accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros() );
     }
     return w;
 }
