@@ -16,7 +16,7 @@ patinagePicots* patinage=nullptr;
 float w;
 String error="";
 private:
-float getW(File infile);
+float getW(String path);
 int nmeas=0;//nombre de mesures angle
 
 };
