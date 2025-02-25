@@ -86,7 +86,7 @@ void mainPicot() {
         int R=preferences.getUInt("radius",4500);
         String path=preferences.getString("NEWNAME","");
         preferences.end();
-        if(alg.runFromFile(w,r,R,path)){
+        if(alg.runFromFile(0,r,R,path)){
             pins.all_CS_high();
             int batt = cap.measBatt() * 100;
             ind=0;
