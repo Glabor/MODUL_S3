@@ -65,67 +65,7 @@
     <div id="measTime" data-value="%MEASTIME%" style="display: none"></div>
     <div id="transTime" data-value="%TRANSTIME%" style="display: none"></div>
 
-    <!-- <p>
-      <span
-        ><form action="javascript:testGet();">
-          ID <span class="obj">%ID%</span>
-          <input type="text" name="input" id="idInput" class="output" />
-          <input type="submit" class="output" /></form
-      ></span>
-    </p>
-
-    <p>
-      <span
-        ><form
-          action="javascript:websocket.send(JSON.stringify({
-          sleep: document.getElementById('sleepInput').value,
-        }))"
-        >
-          Sleeping time <span class="obj">%SLEEP%</span>
-          <input type="text" name="input" id="sleepInput" class="output" />
-          <input type="submit" class="output" /></form
-      ></span>
-    </p>
-
-    <p>
-      <span
-        ><form
-          action="javascript:websocket.send(JSON.stringify({
-          ssid: document.getElementById('ssidInput').value,
-        }))"
-        >
-          Wifi SSID <span class="obj">%SSID%</span>
-          <input type="text" name="input" id="ssidInput" class="output" />
-          <input type="submit" class="output" /></form
-      ></span>
-    </p>
-
-    <p>
-      <span
-        ><form
-          action="javascript:websocket.send(JSON.stringify({
-          pwd: document.getElementById('pwdInput').value,
-        }))"
-        >
-          Wifi password <span class="obj">%PWD%</span>
-          <input type="text" name="input" id="pwdInput" class="output" />
-          <input type="submit" class="output" /></form
-      ></span>
-    </p>
-
-    <p>
-      <span
-        ><form
-          action="javascript:websocket.send(JSON.stringify({
-          host: document.getElementById('hostInput').value,
-        }))"
-        >
-          Host address <span class="obj">%HOST%</span>
-          <input type="text" name="input" id="hostInput" class="output" />
-          <input type="submit" class="output" /></form
-      ></span>
-    </p> -->
-
+    <!-- __________________________________________________________ -->
     <p>
       GPIO state:
       <span id="BOOT0" data-status="ON" class="obj">ON</span>
@@ -201,6 +141,14 @@
         </button>
       </span>
       <span id="ldc" class="output">_____</span>
+    </p>
+    <p></p>
+    <p>
+      HMC (HW) sensor :
+      <span class="obj">
+        <button class="button sick" onclick="websocket.send('hmc')">hmc</button>
+      </span>
+      <span id="hmc" class="output">_____</span>
     </p>
     <p>
       Angle :
