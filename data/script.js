@@ -1,5 +1,7 @@
 var gateway = `ws://${window.location.hostname}/ws`;
 var websocket;
+let parameters = [];
+
 //Init websocket when the page loads
 window.addEventListener("load", onload);
 
@@ -9,6 +11,25 @@ function onload(event) {
 
 function getReadings() {
   websocket.send("websocket connection");
+}
+
+function sendDateTime() {
+  var now = new Date();
+  var dateTimeString =
+    now.getFullYear() +
+    "-" +
+    ("0" + (now.getMonth() + 1)).slice(-2) +
+    "-" +
+    ("0" + now.getDate()).slice(-2) +
+    " " +
+    ("0" + now.getHours()).slice(-2) +
+    ":" +
+    ("0" + now.getMinutes()).slice(-2) +
+    ":" +
+    ("0" + now.getSeconds()).slice(-2);
+
+  websocket.send(dateTimeString);
+  console.log("Sent:", dateTimeString);
 }
 
 function initWebSocket() {
@@ -30,6 +51,27 @@ function onClose(event) {
 
 function onMessage(event) {
   console.log(event.data);
+  try {
+    parameters = JSON.parse(event.data);
+    console.log(parameters);
+    if (!Array.isArray(parameters)) {
+      console.error("Received data is not an array:", parameters);
+      return;
+    }
+
+    let select = document.getElementById("paramSelect");
+    select.innerHTML = "";
+    parameters.forEach((param) => {
+      let option = document.createElement("option");
+      option.value = param.name;
+      option.textContent = param.name;
+      select.appendChild(option);
+    });
+    updateDisplay();
+  } catch (error) {
+    console.error("JSON parsing error:", error);
+  }
+
   var myObj = JSON.parse(event.data);
   var keys = Object.keys(myObj);
 
@@ -90,6 +132,27 @@ function updateVariable() {
     alert("Please enter a new value.");
   }
 }
+
+function updateDisplay() {
+  let selected = document.getElementById("paramSelect").value;
+  let param = parameters.find((p) => p.name === selected);
+  if (param) {
+    // document.getElementById("paramName").textContent = param.name;
+    document.getElementById("paramValue").textContent = param.value;
+  }
+}
+
+function updateValue() {
+  let selected = document.getElementById("paramSelect").value;
+  let newValue = document.getElementById("newValue").value;
+  if (newValue) {
+    websocket.send(selected + ":" + newValue);
+  }
+}
+
+document
+  .getElementById("paramSelect")
+  .addEventListener("change", updateDisplay);
 
 // Initialize the current value display
 updateCurrentValue();
