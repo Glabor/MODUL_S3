@@ -1,15 +1,25 @@
 #include "capteurs.h"
 
-capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr) {
+capteurs::capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, String modele) {
+    rot = new angle(&dsox, modele);
     pins = p;
+    if (pins->LHR_CS_1 >= 0) {
+        ldc1 = new LDC(pins, pins->LHR_CS_1, pins->LHR_SWITCH_1);
+    }
+    if (pins->LHR_CS_2 >= 0) {
+        ldc2 = new LDC(pins, pins->LHR_CS_2, pins->LHR_SWITCH_2);
+    }
+    if (pins->HMCX_CS >= 0) {
+        HW = new hw(pins);
+    }
     rtc = r;
     fs = &f;
     preferences = pr;
     adxl = new Adafruit_ADXL375(pins->ADXL375_SCK, pins->ADXL375_MISO,
                                 pins->ADXL375_MOSI, pins->ADXL375_CS, 12345);
-    preferences->begin("prefid", false);
+    /*preferences->begin("prefid", false);
     id = preferences->getUInt("id", 0);
-    preferences->end();
+    preferences->end();*/
 }
 float capteurs::measBatt() {
     float cellVolt;
@@ -29,7 +39,7 @@ float capteurs::measBatt() {
     Serial.println(cellVolt);
     delay(1000);
     if ((cellVolt < 3.5) && (cellVolt > 0.5) && !(rtc->chg)) { // sleep for 40 days (arbitrary)
-        rtc->goSleep(21600);
+        rtc->goSleep40Days();
     }
 
     return cellVolt;
@@ -46,15 +56,18 @@ bool capteurs::lsmSetup(void) {
     dsox.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
     dsox.setGyroRange(LSM6DS_GYRO_RANGE_125_DPS);
     dsox.setGyroDataRate(LSM6DS_RATE_6_66K_HZ);
-
+    sensors_event_t event;
+    delay(200);
+    dsox.getEvent(&accel, &gyro, &temp);
+    rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
+    Serial.println("init angle: w = " + String(rot->w) + " w_raw = " + String(rot->w_raw) + " gz = " + String(gyro.gyro.z));
     return true;
 }
 
 bool capteurs::adxlSetup(void) {
     SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
     SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
-    digitalWrite(pins->Ext_SPI_CS, HIGH);
-    digitalWrite(pins->RFM95_CS, HIGH);
+    pins->all_CS_high();
     digitalWrite(pins->ADXL375_CS, LOW);
     if (!adxl->begin()) {
         Serial.println("could not find ADXL");
@@ -73,7 +86,6 @@ void capteurs::accBuffering(int meas) {
     sdBuf[r] = lowByte(meas);
     r++;
 }
-
 void lire() {
     while (Serial2.available()) {
         Serial.print((char)Serial2.read());
@@ -136,10 +148,131 @@ void capteurs::HMRsetup() {
     Serial.println("HMR setup done");
 }
 
+void capteurs::mesurePicot(long senstime) {
+    if (!initSens("lsm")) {
+        return;
+    }
+    if (!initSens("sick")) {
+        return;
+    }
+    delay(10);
+    digitalWrite(pins->ON_SICK, HIGH);
+    w0 = rot->wheelRot2();
+    String fn = getName("picot");
+    newName = fn;
+    File file = SD_MMC.open(fn, FILE_WRITE);
+    unsigned long t0 = millis();
+    unsigned long time0 = micros();
+    unsigned long ta_micro;
+    if (!file) {
+        return;
+    }
+    while (millis() < t0 + senstime * 1000) {
+        ta_micro = micros() - time0;
+        for (size_t j = 0; j < 4; j++) {
+            sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+            r++;
+        }
+        getSens("lsm");
+        getSens("lsmGyro");
+        for (int j = 0; j < r; j++) {
+            file.write(sdBuf[j]);
+        }
+        r = 0;
+        for (int i = 0; i < 100; i++) {
+            ta_micro = micros() - time0;
+            for (size_t j = 0; j < 4; j++) {
+                sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+                r++;
+            }
+            getSens("sick");
+            for (int j = 0; j < r; j++) {
+                file.write(sdBuf[j]);
+            }
+            r = 0;
+        }
+    }
+    wf = rot->w;
+    file.flush();
+    file.close();
+    digitalWrite(pins->ON_SICK, LOW);
+}
+
+void capteurs::mesureRipper(long senstime, String sens) {
+
+    String fn = getName(sens);
+    Serial.println(fn);
+    int startMillis = millis();
+    File file = SD_MMC.open(fn, FILE_WRITE);
+    unsigned long time0 = micros();
+    newName = fn;
+    if (!file) {
+        return;
+    }
+    SPI.end();
+    pinSetup();
+    if (!initSens(sens)) {
+        return;
+    }
+    unsigned long t0 = millis();
+    unsigned long ta_micro;
+    while (millis() < t0 + senstime * 1000) {
+        ta_micro = micros() - time0;
+        r = 0;
+        if (sens == "LDC1") {
+            if (ldc1->mesure2f()) {
+                for (size_t j = 0; j < 4; j++) {
+                    sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+                    r++;
+                }
+                sdBuf[r] = ldc1->LHR_MSB1;
+                r++;
+                sdBuf[r] = ldc1->LHR_MID1;
+                r++;
+                sdBuf[r] = ldc1->LHR_LSB1;
+                r++;
+                sdBuf[r] = ldc1->LHR_MSB2;
+                r++;
+                sdBuf[r] = ldc1->LHR_MID2;
+                r++;
+                sdBuf[r] = ldc1->LHR_LSB2;
+                r++;
+            }
+        }
+        if (sens == "LDC2") {
+            if (ldc2->mesure2f()) {
+                for (size_t j = 0; j < 4; j++) {
+                    sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+                    r++;
+                }
+                sdBuf[r] = ldc2->LHR_MSB1;
+                r++;
+                sdBuf[r] = ldc2->LHR_MID1;
+                r++;
+                sdBuf[r] = ldc2->LHR_LSB1;
+                r++;
+                sdBuf[r] = ldc2->LHR_MSB2;
+                r++;
+                sdBuf[r] = ldc2->LHR_MID2;
+                r++;
+                sdBuf[r] = ldc2->LHR_LSB2;
+                r++;
+            }
+        }
+        for (int j = 0; j < r; j++) {
+            file.write(sdBuf[j]);
+        }
+        r = 0;
+    }
+    file.flush();
+    file.close();
+}
+
 bool capteurs::initSens(String sens) {
     Serial.println(sens);
     if (sens == "lsm") {
         return lsmSetup();
+
     } else if (sens == "adxl") {
         return adxlSetup();
     }
@@ -151,9 +284,16 @@ bool capteurs::initSens(String sens) {
         HMRsetup();
         // digitalWrite(pins->ON_SICK, HIGH);
         return true;
-    } else if (sens == "LDC") {
-        LDC_LHRSetup();
-        return true;
+    } else if (sens == "LDC1") {
+        if (pins->LHR_CS_1 < 0) {
+            return false;
+        }
+        return ldc1->LHRSetup();
+    } else if (sens == "LDC2") {
+        if (pins->LHR_CS_2 < 0) {
+            return false;
+        }
+        return ldc2->LHRSetup();
     }
     return false;
 }
@@ -165,6 +305,24 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(accel.acceleration.x * 100));
         accBuffering((int)(accel.acceleration.y * 100));
         accBuffering((int)(accel.acceleration.z * 100));
+        /*accBuffering((int)(gyro.gyro.x * 100));
+        accBuffering((int)(gyro.gyro.y * 100));
+        accBuffering((int)(gyro.gyro.z * 100));
+        rot->correctionangle(0.1, accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
+        accBuffering((int)(rot->ax_raw * 100));
+        accBuffering((int)(rot->ay_raw * 100));
+        accBuffering((int)(rot->w_raw * 100));
+        accBuffering((int)(rot->acfx * 100));
+        accBuffering((int)(rot->acfy * 100));
+        accBuffering((int)(rot->w * 100));
+        accBuffering((int)(rot->anglef * 10));*/
+        return;
+    } else if (sens == "lsmGyro") {
+        sensors_event_t event;
+        dsox.getEvent(&accel, &gyro, &temp);
+        accBuffering((int)(gyro.gyro.x * 100));
+        accBuffering((int)(gyro.gyro.y * 100));
+        accBuffering((int)(gyro.gyro.z * 100));
         return;
     } else if (sens == "adxl") {
         sensors_event_t event;
@@ -213,29 +371,37 @@ void capteurs::getSens(String sens) {
         }
         Serial.println();
         // digitalWrite(pins->ON_SICK, bSick);
+    } else if (sens == "angle") {
+        sensors_event_t event;
+        dsox.getEvent(&accel, &gyro, &temp);
+        rot->initangle(accel.acceleration.x, accel.acceleration.y, accel.acceleration.z, gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, micros());
+        accBuffering((int)rot->anglef);
+    } else if (sens == "LDC1") {
+        if (pins->LHR_CS_1 < 0) {
+            return;
+        }
+        ldc1->mesure2f();
+        accBuffering((int)ldc1->f1 / 1000);
+        accBuffering((int)ldc1->f2 / 1000);
+    } else if (sens == "LDC2") {
+        if (pins->LHR_CS_2 < 0) {
+            return;
+        }
+        ldc2->mesure2f();
+        accBuffering((int)ldc2->f1 / 1000);
+        accBuffering((int)ldc2->f2 / 1000);
     }
     return;
 }
-
-void capteurs::saveSens(String sens, int sensTime) {
-    if (!initSens(sens)) {
-        return;
-    }
-    // if (!sdmmcSetup()) {
-    //     Serial.println("SD_MMC setup failed");
-    //     return;
-    // }
-    // create folder for file
-    int startTime = 123456789;
+String capteurs::getName(String sens) {
+    long startTime = 123456789;
     if (rtc->rtcConnected) {
         DateTime startDate = rtc->rtc.now();
         startTime = startDate.unixtime();
     }
-    // create folder to save chunk of data
     String fileDate = String(startTime);
     String beginStr = fileDate.substring(0, 5);
     String endStr = fileDate.substring(5, 10);
-
     String name =
         "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
     int index = 0;
@@ -253,10 +419,13 @@ void capteurs::saveSens(String sens, int sensTime) {
             Serial.println("file : /" + name.substring(start));
         }
     }
-
-    // int accTime = genVar;
-    // String fn = "/" + sens + ".bin";
-    String fn = name;
+    return name;
+}
+void capteurs::saveSens(String sens, int sensTime) {
+    if (!initSens(sens)) {
+        return;
+    }
+    String fn = getName(sens);
     Serial.println(fn);
     int startMillis = millis();
     File file = SD_MMC.open(fn, FILE_WRITE);
@@ -292,144 +461,6 @@ void capteurs::saveSens(String sens, int sensTime) {
     file.close();
     digitalWrite(pins->ON_SICK, bSick);
 }
-
-void capteurs::Write(byte thisRegister, byte thisValue) {
-    digitalWrite(pins->Ext_SPI_CS, LOW);
-    SPI.transfer(thisRegister);
-    SPI.transfer(thisValue);
-    digitalWrite(pins->Ext_SPI_CS, HIGH);
-}
-
-void capteurs::LDC_LHRSetup() {
-    SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI, pins->Ext_SPI_CS);
-    // SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
-    digitalWrite(pins->RFM95_CS, HIGH);
-    digitalWrite(pins->ADXL375_CS, HIGH);
-
-    pinMode(pins->Ext_SPI_CS, OUTPUT);
-    // digitalWrite(CS, HIGH);
-    digitalWrite(pins->Ext_SPI_CS, LOW);
-    delay(100);
-    Serial.println("setup");
-
-    Write(0x0A, 0x00); //  INTB_MODE
-    Write(0x01, 0x75); //  RP_SET
-    Write(0x04, 0x03); //  DIG_CONF
-    Write(0x05, 0x01); //  ALT_CONFIG
-    Write(0x0C, 0x01); //  D_CONFIG
-    Write(0x30, 0xCC); //  LHR_RCOUNT_LSB sample rate LSB
-    Write(0x31, 0x77); //  LHR_RCOUNT_MSB sample rate MSB
-    Write(0x34, 0x00); //  LHR_CONFIG
-    Write(0x32, 0x00);
-    Write(0x33, 0x00);
-    Write(0x0B, 0x00); //  START_CONFIG
-    delay(500);
-    Serial.println("setup done");
-}
-
-void capteurs::LDC_LHRMesure(long *Max, long *Min, long *Moy, int duration) {
-    digitalWrite(pins->Ext_SPI_CS, LOW);
-    long LHR_status, LHR_LSB, LHR_MID, LHR_MSB, inductance, fsensor;
-    long long sum = 0;
-    int count = 0;
-    *Max = 0;
-    long test = pow(2, 24);
-    *Min = test;
-    *Moy = 0;
-    int sens_div = 0;
-    long f = 16000000; // f from clock gen
-    byte READ = 0b10000000;
-
-    int startTime = 123456789;
-    if (rtc->rtcConnected) {
-        DateTime startDate = rtc->rtc.now();
-        startTime = startDate.unixtime();
-    }
-    String fileDate = String(startTime);
-    String beginStr = fileDate.substring(0, 5);
-    String endStr = fileDate.substring(5, 10);
-    String sens = "LHR";
-    String name = "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
-    int index = 0;
-    while (name.indexOf("/", index) >= 0) {
-        int start = name.indexOf("/", index) + 1;
-        index = name.indexOf("/", index) + 1;
-        int end = name.indexOf("/", index);
-        if (end >= 0) {
-            String dirCreate = SD_MMC.mkdir(name.substring(0, end)) ? "dir " + name.substring(0, end) + " created " : " dir not created ";
-            Serial.println(dirCreate);
-        } else {
-            Serial.println("file : /" + name.substring(start));
-        }
-    }
-    File file = SD_MMC.open(name, FILE_WRITE);
-    neopixelWrite(pins->LED, 0, 0, 0);
-    delay(1000);
-    int start_time = millis();
-
-    while (millis() < start_time + duration) {
-        digitalWrite(pins->Ext_SPI_CS, LOW);
-        SPI.transfer(0x3B | READ); // reading status
-        uint8_t LHR_status = SPI.transfer(0x00);
-        digitalWrite(pins->Ext_SPI_CS, HIGH);
-
-        if (LHR_status == 0) {
-            neopixelWrite(pins->LED, 12, 12, 12);
-            // Serial.println("status loop");
-
-            digitalWrite(pins->Ext_SPI_CS, LOW);
-            SPI.transfer(0x38 | READ);
-            LHR_LSB = SPI.transfer(0x00);
-            digitalWrite(pins->Ext_SPI_CS, HIGH);
-
-            digitalWrite(pins->Ext_SPI_CS, LOW);
-            SPI.transfer(0x39 | READ);
-            LHR_MID = SPI.transfer(0x00);
-            digitalWrite(pins->Ext_SPI_CS, HIGH);
-
-            digitalWrite(pins->Ext_SPI_CS, LOW);
-            SPI.transfer(0x3A | READ);
-            LHR_MSB = SPI.transfer(0x00);
-            digitalWrite(pins->Ext_SPI_CS, HIGH);
-
-            inductance = (LHR_MSB << 16) | (LHR_MID << 8) | LHR_LSB;
-            String dataMessage = String(inductance) + ",";
-
-            fsensor = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
-            dataMessage = dataMessage + fsensor + ",";
-            if (fsensor < *Min) {
-                *Min = fsensor;
-                neopixelWrite(pins->LED, 0, 0, 0);
-                // delay(50);
-            }
-            if (fsensor > *Max) {
-                *Max = fsensor;
-                neopixelWrite(pins->LED, 0, 0, 0);
-                // delay(50);
-            }
-            sum += fsensor;
-            count++;
-            dataMessage = dataMessage + String((long)*Max) + ",";
-            dataMessage = dataMessage + String((long)*Min) + ",";
-            dataMessage = dataMessage + String((long long)sum);
-            Serial.println(dataMessage);
-
-            file.write(LHR_MSB);
-            file.write(LHR_MID);
-            file.write(LHR_LSB);
-        }
-    }
-    // sum = sum / count;
-    // Moy = &sum;
-    long moy = sum / count;
-    *Moy = moy;
-    digitalWrite(pins->Ext_SPI_CS, HIGH);
-    file.flush();
-    file.close();
-    // SPI.endTransaction();
-    SPI.end();
-}
-
 void capteurs::pinSetup() {
     // pinMode(pins->ADXL375_SCK, OUTPUT);
     // pinMode(pins->ADXL375_MOSI, OUTPUT);
@@ -443,33 +474,28 @@ void capteurs::pinSetup() {
     digitalWrite(pins->RFM95_CS, HIGH);
     digitalWrite(pins->ON_SICK, bSick);
     analogReadResolution(12);
-    pinMode(pins->Ext_SPI_CS, OUTPUT);
-    digitalWrite(pins->Ext_SPI_CS, HIGH);
-}
-
-int capteurs::wheelRot(int sampleTime) {
-    /*return wheel rotation speedafter average of gyroscope measures*/
-    /*previous bool if wheel rotation is greater than 1 RPM */
-    int milli0 = millis();
-    lsmSetup();
-    dsox.getEvent(&accel, &gyro, &temp);
-    float wx = gyro.gyro.x;
-    float wy = gyro.gyro.y;
-    float wz = gyro.gyro.z;
-
-    int count = 1;
-    while (millis() - milli0 < sampleTime) {
-        dsox.getEvent(&accel, &gyro, &temp);
-        count++;
-        wx = (wx * (count - 1) + gyro.gyro.x) / count;
-        wy = (wy * (count - 1) + gyro.gyro.y) / count;
-        wz = (wz * (count - 1) + gyro.gyro.z) / count;
-        // wy = (1 - 0.1) * wy + 0.1 * gyro.gyro.y;
-        // wz = (1 - 0.1) * wz + 0.1 * gyro.gyro.z;
-        // w = sqrt(sq(wy) + sq(wz)) * wz / abs(wz);
+    if (pins->LHR_CS_1 >= 0) {
+        pinMode(pins->LHR_CS_1, OUTPUT);
+        digitalWrite(pins->LHR_CS_1, HIGH);
+        pinMode(pins->LHR_SWITCH_1, OUTPUT);
+        digitalWrite(pins->LHR_SWITCH_1, LOW);
     }
-    double w = sqrt(sq(wx) + sq(wy) + sq(wz));
-
-    int rotW = (int)abs(100 * w); // speed of wheel (100*RPM)
-    return rotW;
+    if (pins->LHR_CS_2 >= 0) {
+        pinMode(pins->LHR_CS_2, OUTPUT);
+        digitalWrite(pins->LHR_CS_2, HIGH);
+        pinMode(pins->LHR_SWITCH_2, OUTPUT);
+        digitalWrite(pins->LHR_SWITCH_2, LOW);
+    }
+    if (pins->HMCX_CS >= 0) {
+        pinMode(pins->HMCX_CS, OUTPUT);
+        digitalWrite(pins->HMCX_CS, HIGH);
+        pinMode(pins->HMCY_CS, OUTPUT);
+        digitalWrite(pins->HMCY_CS, HIGH);
+        pinMode(pins->HMCZ_CS, OUTPUT);
+        digitalWrite(pins->HMCZ_CS, HIGH);
+        pinMode(pins->SR, OUTPUT);
+        digitalWrite(pins->SR, LOW);
+    }
+    pins->all_CS_high();
+    SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
 }

@@ -8,16 +8,17 @@
 #include "pinout.h"
 #include "rtcClass.h"
 
-String model = "v3.1";
-
+String cardModel = "v3.1";
+String breakout = "rippersimplev1";
+String etrierModel="ripperL17";
 Preferences preferences;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-pinout pins(model);
-rtcClass rtc;
-capteurs cap(&pins, &rtc, SD_MMC, &preferences);
-comLORA lora(&pins, &cap);
+pinout pins(cardModel,breakout);
+rtcClass rtc(&preferences,SD_MMC);
+capteurs cap(&pins, &rtc, SD_MMC, &preferences,etrierModel);
+comLORA lora(&pins, &cap,&preferences);
 charger charge(&pins, &rtc, SD_MMC, &preferences, &cap, &server, &ws, &lora);
 
 void setup() {
@@ -32,243 +33,147 @@ void setup() {
     pins.sdmmcSetup();
     rtc.rtcSetup();
     cap.lsmSetup();
+    //cap.initSens("LDC1");
+    //cap.initSens("LDC2");
     // cap.adxlSetup();
     charge.initSPIFFS();
     charge.initWebSocket();
     charge.setup();
-    cap.measBatt();
 }
-
-void sendRSSI() {
-    pins.rainbowLoop(10);
-    int milli0 = millis();
-    while (millis() - milli0 < 30e3) {
-        int responseCode = -2;
-        if (charge.wifiConnect()) {
-            int RSSI = WiFi.RSSI();
-            JsonDocument info;
-            info["RSSI"] = RSSI;
-            info["millis"] = millis() - milli0;
-            String infoPost;
-            serializeJson(info, infoPost);
-            Serial.println(infoPost);
-            responseCode = charge.httpPostRequest(charge.host + "/rssi", infoPost);
-        }
-        Serial.print("response : ");
-        Serial.println(responseCode);
-        delay(500);
-    }
-}
-
-/*TEST*/
-#define CS pins.Ext_SPI_CS
-byte READ = 0b10000000;
-uint8_t status;
-long LHR_status;
-#define STATUS 0x20
-#define LHR_STATUS 0x3B
-#define LHR_DATA_LSB 0x38
-#define LHR_DATA_MID 0x39
-#define LHR_DATA_MSB 0x3A
-long LHR_LSB, LHR_MID, LHR_MSB, LHR_DATA, inductance;
-int sens_div = 0;
-long f = 16000000; // f from clock gen
-
-void Write(byte thisRegister, byte thisValue) {
-    digitalWrite(CS, LOW);
-    SPI.transfer(thisRegister);
-    SPI.transfer(thisValue);
-    digitalWrite(CS, HIGH);
-}
-
-long ReadLHRStatus(byte thisRegister) {
-    // Serial.println("Reading LHR STATUS register");
-    digitalWrite(CS, LOW);
-    SPI.transfer(thisRegister | READ); // reading status
-    LHR_status = SPI.transfer(0x00);
-    // Serial.println(LHR_status, BIN);
-    digitalWrite(CS, HIGH);
-    return LHR_status;
-}
-
-long ReadLHR_Data(byte thisRegister) {
-    digitalWrite(CS, LOW);
-    SPI.transfer(thisRegister | READ);
-    LHR_DATA = SPI.transfer(0x00);
-    // Serial.println(LHR_DATA);
-    digitalWrite(CS, HIGH);
-    return LHR_DATA;
-}
-
-void rf95Setup() {
-    Serial.println("rf setup");
-    digitalWrite(pins.RFM95_CS, LOW);
-    digitalWrite(pins.ADXL375_CS, HIGH);
-    digitalWrite(pins.Ext_SPI_CS, HIGH);
-    digitalWrite(pins.RFM95_RST, LOW);
-    delay(100);
-    digitalWrite(pins.RFM95_RST, HIGH);
-    delay(100);
-
-    if (!lora.rf95->init()) {
-        Serial.println("LoRa radio init failed");
-    }
-
-    lora.rf95->setFrequency(RF95_FREQ);
-    lora.rf95->setTxPower(23, false);
-    // set Bandwidth (7800,10400,15600,20800,31250,41700,62500,125000,250000, 500000)
-    int bwSet = 125000;
-    lora.rf95->setSignalBandwidth(bwSet);
-    // set Coding Rate (5, 6, 7, 8)
-    int crSet = 5;
-    lora.rf95->setCodingRate4(crSet);
-    // set Spreading Factor (6->64, 7->128, 8->256, 9->512, 10->1024, 11->2048, 12->4096)
-    int sfSet = 7;
-    lora.rf95->setSpreadingFactor(sfSet);
-    digitalWrite(pins.RFM95_CS, HIGH);
-}
-
-void rfSend(String message) {
-    digitalWrite(pins.RFM95_CS, LOW);
-    int bufSize = message.length() + 1;
-    char Buf[bufSize];
-    message.toCharArray(Buf, bufSize);
-    lora.rf95->send((uint8_t *)Buf, bufSize);
-    lora.rf95->waitPacketSent();
-    digitalWrite(pins.RFM95_CS, HIGH);
-}
-
-void LDCsetup() {
-    // Serial.begin(115200);
-    SPI.begin(pins.ADXL375_SCK, pins.ADXL375_MISO, pins.ADXL375_MOSI);
-
-    digitalWrite(pins.RFM95_CS, HIGH);
-    digitalWrite(pins.ADXL375_CS, HIGH);
-
-    pinMode(CS, OUTPUT);
-    // digitalWrite(CS, HIGH);
-    digitalWrite(CS, LOW);
-    delay(500);
-    Serial.println("setup");
-
-    // rf95Setup();
-
-    Write(0x0A, 0x00); //  INTB_MODE
-    Write(0x01, 0x75); //  RP_SET
-    Write(0x04, 0x03); //  DIG_CONF
-    Write(0x05, 0x01); //  ALT_CONFIG
-    Write(0x0C, 0x01); //  D_CONFIG
-    Write(0x30, 0xCC); //  LHR_RCOUNT_LSB sample rate LSB
-    Write(0x31, 0x77); //  LHR_RCOUNT_MSB sample rate MSB
-    Write(0x34, 0x00); //  LHR_CONFIG
-    Write(0x32, 0x00);
-    Write(0x33, 0x00);
-    Write(0x0B, 0x00); //  START_CONFIG
-    delay(500);
-    Serial.println("setup done");
-}
-
-void LDCloop() {
-    status = ReadLHRStatus(LHR_STATUS);
-
-    // if (status || 0b00000001 == 0b00000001) { // if bit0 of status i.e. drdy = 0, output is available
-    if (status == 0) {
-        Serial.print(status, BIN);
-        Serial.print(",");
-        // Serial.println("status loop");
-        LHR_LSB = ReadLHR_Data(0x38);
-        LHR_MID = ReadLHR_Data(0x39);
-        LHR_MSB = ReadLHR_Data(0x3A);
-        inductance = (LHR_MSB << 16) | (LHR_MID << 8) | LHR_LSB;
-        String dataMessage = String(inductance) + ",";
-        // Serial.print(inductance);
-        // Serial.print(",");
-
-        long fsensor = (pow(2, sens_div) * f * inductance) / (pow(2, 24));
-        dataMessage = dataMessage + fsensor;
-        Serial.println(dataMessage);
-        // rfSend(dataMessage);
-    }
-    // Serial.println(fsensor);
-    // delay(10); // try without delay?
-}
-
-void LDCTest() {
-    Serial.println("test");
-    neopixelWrite(pins.LED, 12, 0, 0);
-    cap.LDC_LHRSetup();
-    // LDCsetup();
-    // delay(1000);
-    digitalWrite(pins.RFM95_CS, HIGH);
-    digitalWrite(pins.ADXL375_CS, HIGH);
-
-    neopixelWrite(pins.LED, 12, 12, 0);
-    while (true) {
-        LDCloop();
-        neopixelWrite(pins.LED, 12, 12, 12);
-    }
-}
-/*TEST*/
+byte message[100];
+int ind;
+#define addbyte(val){ message[ind]=(byte)val; ind++;}
+#define add2byte(val){ message[ind]=lowByte(val); ind++; message[ind]=highByte(val); ind++;}
+#define add3byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++;}
+#define add4byte(val){message[ind]=lowByte(val); ind++; message[ind]=lowByte(val>>8); ind++; message[ind]=lowByte(val>>16); ind++; message[ind]=lowByte(val>>24); ind++;}
 
 void mainRipper() {
-    // init LDC
-    // mesure LDC
-    // mettre resultats dans message
-    // rafale message
-    long max;
-    long min;
-    long moy;
-    max = 30;
-    min = 10;
-    moy = 20;
-    digitalWrite(pins.RFM95_CS, HIGH);
-    digitalWrite(pins.ADXL375_CS, HIGH);
-    cap.LDC_LHRSetup();
-    cap.LDC_LHRMesure(&max, &min, &moy, 3000);
-    neopixelWrite(pins.LED, 0, 12, 0);
-    int batt = cap.measBatt() * 100;
-
-    int id = 12;
-    byte message[30];
-    message[0] = lowByte(id);
-    message[1] = highByte(id);
-    message[3] = lowByte(max >> 8 * 2);
-    message[4] = lowByte(max >> 8 * 1);
-    message[5] = lowByte(max >> 8 * 0);
-    message[6] = lowByte(min >> 8 * 2);
-    message[7] = lowByte(min >> 8 * 1);
-    message[8] = lowByte(min >> 8 * 0);
-    message[9] = lowByte(moy >> 8 * 2);
-    message[10] = lowByte(moy >> 8 * 1);
-    message[11] = lowByte(moy >> 8 * 0);
-    message[12] = lowByte(batt);
-    message[13] = highByte(batt);
-    lora.rafale(message, 14, id);
-    rtc.goSleep(20);
-}
-
-void mainTask() {
-    Serial.println("main");
-    // digitalWrite(pins.ON_SICK, HIGH);
-    // pins.rainbowLoop(10);
-    cap.type = "sick";
-    cap.saveSens(cap.type, 10);
-    if (charge.wifiConnect()) {
-        charge.sendSens(cap.type);
+    preferences.begin("prefid", false);
+    int id=preferences.getUInt("id",-1);
+    if(id==-1){
+        return;
     }
-    delay(2000);
-    WiFi.disconnect(true);
-
-    cap.type = "adxl";
-    cap.saveSens(cap.type, 10);
-    if (charge.wifiConnect()) {
-        charge.sendSens(cap.type);
+    bool waitingtrans = preferences.getBool("waitingtrans",false);//pas de mesure en attente de transmission
+    preferences.end();
+    float w=cap.rot->wheelRot2();
+    //randomSeed(analogRead(pins.SICK1));
+    //w=((float)random(0,2))*0.5*2*M_PI/60;
+    float batvolt = cap.measBatt();
+    rtc.log(batvolt, waitingtrans, w);
+    preferences.begin("prefid", false);
+    int sleepNoMeas =preferences.getUInt("sleepNoMeas",30);
+    int transTime =preferences.getUInt("transTime",id);
+    int measTime =preferences.getUInt("measTime",0);
+    int sleepMeas =preferences.getUInt("sleepMeas",8);
+    preferences.end();
+    if(abs(w)<2*M_PI/60){//rotation <1rpm
+        if(waitingtrans){
+            lora.rfSend("cannot transmit "+String(abs(w)*30/M_PI)+"rpm");
+            rtc.goSleepMinuteFixe(sleepNoMeas,transTime);
+        }
+        //else{
+         //   lora.rfSend("cannot measure "+String(abs(w)*30/M_PI)+"rpm");
+        //    rtc.goSleepMinuteFixe(sleepNoMeas,measTime);
+        //}
+        
     }
-    delay(2000);
-    WiFi.disconnect(true);
+    pins.all_CS_high();
+    if(waitingtrans){
+        int batt = cap.measBatt() * 100;
+        neopixelWrite(pins.LED, 0, 12, 0);
+        ind=0;
+        addbyte(id);
+        addbyte(82); //"R"
+        preferences.begin("prefid", false);
+        add4byte(preferences.getLong("timestamp",0));
+        add3byte(preferences.getLong("f1Max1",0));
+        add3byte(preferences.getLong("f1Min1",0));
+        add3byte(preferences.getLong("f1moy1",0));
+        add3byte(preferences.getLong("f2Max1",0));
+        add3byte(preferences.getLong("f2Min1",0));
+        add3byte(preferences.getLong("f2moy1",0));
+        if(breakout == "ripperdoublev1"){
+            add3byte(preferences.getLong("f1Max2",0));
+            add3byte(preferences.getLong("f1Min2",0));
+            add3byte(preferences.getLong("f1moy2",0));
+            add3byte(preferences.getLong("f2Max2",0));
+            add3byte(preferences.getLong("f2Min2",0));
+            add3byte(preferences.getLong("f2moy2",0));
+        }
+        add2byte((int)preferences.getFloat("rtcTemp",0)*10);
+        add2byte(batt);
+        preferences.putBool("waitingtrans",false);
+        preferences.end();
+        lora.rafale(message, ind, id);
+        rtc.goSleepHeureFixe(sleepMeas,measTime);
+    }
+    else{
+        neopixelWrite(pins.LED, 0, 0, 12);
+        long timestamp=rtc.rtc.now().unixtime();
+        preferences.begin("prefid", false);
+        preferences.putLong("timestamp",timestamp);
+        int duration=preferences.getUInt("sleep",10);
+        preferences.end();
+        waitingtrans=true;//on transmet qqa
+        cap.mesureRipper(10,"LDC1");
+        float RTCtemp=rtc.rtc.getTemperature();
+        if(cap.ldc1->count>0){ 
+            preferences.begin("prefid", false);
+            preferences.putLong("f1Max1",cap.ldc1->f1Max);
+            preferences.putLong("f1Min1",cap.ldc1->f1Min);
+            preferences.putLong("f1moy1",cap.ldc1->f1moy);
+            preferences.putLong("f2Max1",cap.ldc1->f2Max);
+            preferences.putLong("f2Min1",cap.ldc1->f2Min);
+            preferences.putLong("f2moy1",cap.ldc1->f2moy);
+            preferences.end();
+        }
+        else{
+            preferences.begin("prefid", false);
+            preferences.putLong("f1Max1",1);
+            preferences.putLong("f1Min1",2);
+            preferences.putLong("f1moy1",3);
+            preferences.putLong("f2Max1",4);
+            preferences.putLong("f2Min1",5);
+            preferences.putLong("f2moy1",6);
+            preferences.end();
+        }
+        if(breakout == "ripperdoublev1"){
+            cap.mesureRipper(10,"LDC2");      
+            if(cap.ldc2->count>0){
+                preferences.begin("prefid", false);
+                preferences.putLong("f1Max2",cap.ldc2->f1Max);
+                preferences.putLong("f2Min2",cap.ldc2->f1Min);
+                preferences.putLong("f1moy2",cap.ldc2->f1moy);
+                preferences.putLong("f2Max2",cap.ldc2->f2Max);
+                preferences.putLong("f2Min2",cap.ldc2->f2Min);
+                preferences.putLong("f2moy2",cap.ldc2->f2moy);
+                preferences.end();
+            }
+            else{
+                preferences.begin("prefid", false);
+                preferences.putLong("f1Max2",1);
+                preferences.putLong("f2Min2",2);
+                preferences.putLong("f1moy2",3);
+                preferences.putLong("f2Max2",4);
+                preferences.putLong("f2Min2",5);
+                preferences.putLong("f2moy2",6);
+            }
+        }
+        preferences.begin("prefid", false);
+        preferences.putFloat("rtcTemp",RTCtemp);
+        preferences.putBool("waitingtrans",waitingtrans);
+        preferences.end();
+        if(transTime==measTime){
+            rtc.safeRestart();
+        }
+        lora.rfSend("measure done");
+        rtc.goSleepMinuteFixe(0,transTime);
+    }
 }
-
 void loop() {
     // LDCTest();
+    //cap.ldc1->mesure2f();
+    //cap.ldc2->mesure2f();
+    //mainRipper();
     charge.routinecharge(&mainRipper);
 }

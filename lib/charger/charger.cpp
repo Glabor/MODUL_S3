@@ -142,6 +142,49 @@ String charger::processor(const String &var) {
 
         return (String(idRead));
     }
+    if (var == "RADIUS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("radius", 0);
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "SLEEPMEAS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleepMeas", 0); // sleep after measuring (h)
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "SLEEPNOMEAS") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("sleepNoMeas", 0); // sleep after not measuring (min)
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "MEASTIME") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("measTime", 0); // minute of the hour to wake up
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "TRANSTIME") {
+        preferences->begin("prefid", false);
+        int idRead = preferences->getUInt("transTime", 0); // minute of the hour to transmit
+        preferences->end();
+
+        return (String(idRead));
+    }
+    if (var == "TOOLNUM") {
+        // if(rtc->setForceWakeupDate(ssid)){}
+        /*preferences->begin("prefid", false);
+        String preftoolNum = preferences->getString("toolNum", ssid);
+        preferences->end();*/
+
+        return (rtc->getForceWakeupDate());
+    }
     if (var == "SSID") {
         preferences->begin("prefid", false);
         String prefSSID = preferences->getString("SSID", ssid);
@@ -259,7 +302,8 @@ void charger::serverRoutes() {
             Serial.println("------");
             remFile = p->value();
         }
-        if (SD_MMC.rmdir(remFile)) {
+        // if (SD_MMC.rmdir(remFile)) {
+        if (dirClear(remFile)) {
             neopixelWrite(pins->LED, 0, pins->bright, 0); // G
             delay(50);
         } else {
@@ -276,6 +320,37 @@ void charger::serverRoutes() {
         request->send(SD_MMC, cap->newName, "text/plain", false);
     });
     Serial.println("server ok");
+}
+bool charger::dirClear(String path) {
+    if (SD_MMC.rmdir(path)) {
+        Serial.println("folder " + path + " deleted");
+        return true;
+    }
+    Serial.println("openning folder " + path);
+    File root = SD_MMC.open(path);
+    File file = root.openNextFile();
+    while (file) {
+        String folderName = file.name();
+        if (file.isDirectory()) {
+            if (!dirClear(path + "/" + folderName)) {
+                return false;
+            };
+        } else {
+            if (!SD_MMC.remove(path + "/" + folderName)) {
+                Serial.println("cannot delete file " + folderName);
+                return false;
+            }
+        }
+        file.close();
+        file = root.openNextFile();
+    }
+    root.close();
+    if (!SD_MMC.rmdir(path)) {
+        Serial.println("cannot delete folder " + path);
+        return false;
+    }
+    Serial.println("folder " + path + " deleted");
+    return true;
 }
 int charger::httpPostRequest(String serverName, String postText) {
     WiFiClient client;
@@ -341,7 +416,7 @@ int charger::sendSens(String type) {
 
     String infoPost;
     serializeJson(info, infoPost);
-    int responseCode = httpPostRequest("http://LAPTOP-TF0BBSC1:5000/sens", infoPost);
+    int responseCode = httpPostRequest(host + "/sens", infoPost);
     Serial.println(responseCode);
     if (responseCode > 0) {
         // connected flask on
@@ -380,6 +455,21 @@ bool charger::wifiConnect() {
     // Connect to Wi-Fi
     int count1 = 0;
     int count2 = 0;
+
+    preferences->begin("prefid", false);
+    int idRead = preferences->getUInt("id", 0);
+    preferences->end();
+
+    if (ssid == "SENSAR_OSLO") {
+        Serial.println("Static Local IP : 192.168.216." + String(idRead));
+        IPAddress local_IP(192, 168, 216, idRead); // Set the desired IP
+        IPAddress gateway(192, 168, 216, 77);      // Set the gateway IP
+        IPAddress subnet(255, 255, 255, 0);        // Set the subnet mask
+        // Configure the ESP32 to use a static IP
+        if (!WiFi.config(local_IP, gateway, subnet)) {
+            Serial.println("Static IP configuration failed.");
+        }
+    }
     Serial.print("Connecting Wifi : ");
     Serial.println(ssid);
     WiFi.mode(WIFI_MODE_APSTA);
@@ -397,6 +487,7 @@ bool charger::wifiConnect() {
                 delay(200);
                 Serial.println("Connecting to WiFi..");
             }
+            count2 = 0;
             if (WiFi.status() == WL_CONNECTED) {
                 neopixelWrite(pins->LED, 0, pins->bright, 0); // G
                 Serial.println(WiFi.localIP());
@@ -430,12 +521,13 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             pins->color[1] = 0.;
             pins->color[2] = pins->bright / 2;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-
+            testlora = true;
         } else if (message == "off") {
             pins->color[0] = 0.;
             pins->color[1] = pins->bright;
             pins->color[2] = pins->bright;
             neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
+            testlora = false;
             // neopixelWrite(LED, 0, bright, bright); // cyan
         } else if (message == "alarm") {
             rtc->goSleep(cap->genVar);
@@ -449,6 +541,20 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             Serial.println("sick");
         } else if (message == "wifi") {
             Serial.println("wifi");
+        } else if (message == "angle") {
+            bAng = !bAng;
+            printInt = 0;
+        } else if (message == "RSSI") {
+            bRSSI = !bRSSI;
+            printInt = 0;
+        } else if (message == "ldc") {
+            bLDC = !bLDC;
+            printInt = 0;
+        } else if (message == "s_ldc") {
+            bS_LDC = true;
+        } else if (message == "hmc") {
+            bHMC = !bHMC;
+            printInt = 0;
         } else if (message == "lsm") {
             bLSM = !bLSM;
             printInt = 0;
@@ -489,10 +595,70 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 prints["print"] = String((const char *)myObject["sleep"]).toInt();
 
                 int sleep = String((const char *)myObject["sleep"]).toInt();
-
+                cap->genVar = sleep; // measure duration pour le savesens
                 preferences->begin("prefid", false);
                 preferences->putUInt("sleep", sleep);
                 preferences->end();
+            }
+            if (myObject.containsKey("radius")) {
+                prints["print"] = String((const char *)myObject["radius"]).toInt();
+
+                int radius = String((const char *)myObject["radius"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("radius", radius);
+                preferences->end();
+            }
+            if (myObject.containsKey("sleepMeas")) {
+                prints["print"] = String((const char *)myObject["sleepMeas"]).toInt();
+
+                int sleepMeas = String((const char *)myObject["sleepMeas"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("sleepMeas", sleepMeas);
+                preferences->end();
+            }
+            if (myObject.containsKey("sleepNoMeas")) {
+                prints["print"] = String((const char *)myObject["sleepNoMeas"]).toInt();
+
+                int sleepNoMeas = String((const char *)myObject["sleepNoMeas"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("sleepNoMeas", sleepNoMeas);
+                preferences->end();
+            }
+            if (myObject.containsKey("measTime")) {
+                prints["print"] = String((const char *)myObject["measTime"]).toInt();
+
+                int measTime = String((const char *)myObject["measTime"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("measTime", measTime);
+                preferences->end();
+            }
+            if (myObject.containsKey("transTime")) {
+                prints["print"] = String((const char *)myObject["transTime"]).toInt();
+
+                int transTime = String((const char *)myObject["transTime"]).toInt();
+
+                preferences->begin("prefid", false);
+                preferences->putUInt("transTime", transTime);
+                preferences->end();
+            }
+            if (myObject.containsKey("toolNum")) {
+                /*prints["print"] = String((const char *)myObject["toolNum"]);
+
+                String toolNum = (const char *)myObject["toolNum"];
+
+                preferences->begin("prefid", false);
+                preferences->putString("toolNum", toolNum);
+                preferences->end();*/
+                String toolNum = (const char *)myObject["toolNum"];
+                if (rtc->setForceWakeupDate(toolNum)) {
+                    prints["print"] = String((const char *)myObject["toolNum"]);
+                } else {
+                    prints["print"] = "error";
+                }
             }
             if (myObject.containsKey("ssid")) {
                 prints["print"] = String((const char *)myObject["ssid"]);
@@ -549,11 +715,102 @@ void charger::loopWS() {
     bool bBoot0Change = (digitalRead(pins->BOOT0) != bBoot0);
     bBoot0 = bBoot0Change ? !bBoot0 : bBoot0;
     prints["BOOT0"] = bBoot0 ? "ON" : "OFF";
-
+    if (testlora) {
+        if (lora->rf95Setup()) {
+            byte buf[250];
+            int sendSize = 250;
+            buf[0] = highByte(2);
+            buf[1] = lowByte(2);
+            lora->rf95->send((uint8_t *)buf, sendSize);
+            lora->rf95->waitPacketSent();
+        }
+    }
     if (cap->bSick) {
         float sickMeas = analogRead(pins->SICK1);
         Serial.println(sickMeas);
         prints["sick"] = String(sickMeas);
+    }
+    if (bAng) {
+        sensors_event_t event;
+        cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
+        cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->accel.gyro.x, cap->accel.gyro.y, cap->accel.gyro.z, micros());
+        // Serial.println(String((int)cap->rot->anglef));
+        prints["angle"] = String((int)cap->rot->anglef);
+    }
+    if (bRSSI) {
+        prints["RSSI"] = String(WiFi.RSSI());
+    }
+    if (bHMC) {
+        SPI.end();
+        cap->pinSetup();
+        cap->HW->ADCsetup();
+
+        cap->HW->r = 0;
+        digitalWrite(cap->HW->set, HIGH);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        cap->HW->ADC_conv();
+
+        digitalWrite(cap->HW->set, LOW);
+        delayMicroseconds(50);
+        cap->HW->Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+        byte *dataPrint;
+        dataPrint = cap->HW->ADC_conv();
+
+        long x1, y1, z1, x2, y2, z2;
+        int i = 0;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        x1 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        y2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        i++;
+        z2 = (long)dataPrint[0 + i * 3] << 16 |
+             (long)dataPrint[1 + i * 3] << 8 |
+             (long)dataPrint[2 + i * 3];
+        prints["hmc"] = String(x1 - x2) + "," + String(y1 - y2) + "," + String(z1 - z2);
+    }
+    if (bLDC) {
+        SPI.end();
+        cap->pinSetup();
+        if (pins->LHR_CS_1 >= 0) {
+            cap->ldc1->LHRSetup();
+        }
+        if (pins->LHR_CS_2 >= 0) {
+            cap->ldc2->LHRSetup();
+        }
+        String result = "";
+        // prints["ldc"]=',';
+        if (pins->LHR_CS_1 >= 0) {
+            // cap->initSens("LDC1");
+            cap->ldc1->mesure2f();
+            result += String((int)cap->ldc1->f1 / 1000) + ',' + String((int)cap->ldc1->f2 / 1000);
+        }
+        if (pins->LHR_CS_2 >= 0) {
+            // cap->initSens("LDC2");
+            cap->ldc2->mesure2f();
+            result += ',' + String((int)cap->ldc2->f1 / 1000) + ',' + String((int)cap->ldc2->f2 / 1000);
+        }
+        prints["ldc"] = result;
+    }
+    if (bS_LDC) {
+        cap->saveSens("LDC1", cap->genVar);
+        bS_LDC = false;
+        neopixelWrite(pins->LED, pins->bright, pins->bright / 2, 0); // Orange
     }
     if (bLSM) {
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
@@ -597,7 +854,7 @@ void charger::loopWS() {
         Serial.println("boot0");
     }
 
-    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick) {
+    if (cap->bADXL || bLSM || bBoot0Change || cap->bSick || bAng || bLDC || bHMC || bRSSI) {
         String stringPrints;
         serializeJson(prints, stringPrints);
         ws->textAll(stringPrints);
@@ -614,16 +871,16 @@ int charger::manageLoop() {
     if (!local) {
         // flask on
         comTO = 10;
-        pins->color[0] = pins->bright;
+        /*pins->color[0] = pins->bright;
         pins->color[1] = pins->bright / 2;
-        pins->color[2] = 0;
+        pins->color[2] = 0;*/
     } else {
         if (!rtc->chg) {
             // sleep
             preferences->begin("prefid", false);
-            int idRead = preferences->getUInt("sleep", 33);
+            int idRead = preferences->getUInt("sleepNoMeas", 33);
             preferences->end();
-            rtc->goSleep(idRead);
+            rtc->goSleep(idRead * 60);
         } else {
             // listen local
             comTO = 60;
