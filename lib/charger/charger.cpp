@@ -4,7 +4,7 @@
 void charger::newParam(String name, String def, String pref) {
     preferences->begin("struct", true);
     String val = preferences->getString(pref.c_str(), def);
-    Serial.println("name:"+name+",val:"+val+",pref:"+pref);
+    Serial.println("name:" + name + ",val:" + val + ",pref:" + pref);
     params.push_back({name, val, pref});
     preferences->end();
 }
@@ -30,7 +30,7 @@ void charger::initParams() {
     //                                           sleepMeas, sleepNoMeas, measTime, transTime};
     // numParams = sizeof(parameters) / sizeof(parameters[0]);
     numParams = params.size();
-    Serial.println(String(numParams)+ " new parameters");
+    Serial.println(String(numParams) + " new parameters");
 }
 
 // Send parameters list to client
@@ -497,6 +497,13 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
         int sep = message.indexOf(':');
         Serial.println(message);
         if (sep != -1) {
+            int year, month, day, hour, minute, second;
+            if (sscanf((char *)data, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6) {
+                rtc->rtc.adjust(DateTime(year, month, day, hour, minute, second));
+                Serial.println("RTC updated!");
+                return;
+            }
+
             String paramName = message.substring(0, sep);
             // float newValue = message.substring(sep + 1).toFloat();
             String newValue = message.substring(sep + 1);
@@ -515,11 +522,6 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
         } else {
             prints = JsonDocument();
             prints["print"] = message;
-            int year, month, day, hour, minute, second;
-            if (sscanf((char *)data, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6) {
-                rtc->rtc.adjust(DateTime(year, month, day, hour, minute, second));
-                Serial.println("RTC updated!");
-            }
             if (message == "on") {
                 pins->color[0] = pins->bright;
                 pins->color[1] = 0.;
