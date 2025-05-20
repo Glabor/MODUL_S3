@@ -111,14 +111,18 @@ String charger::processor(const String &var) {
         Serial.print(" : ");
         Serial.println(rtc->rtc.now().unixtime());
         DateTime dt = rtc->rtc.now();
-        String date = String(dt.year()) + "/" +
-                      String(dt.month()) + "/" +
-                      String(dt.day()) + " " +
-                      String(dt.hour()) + ":" +
-                      String(dt.minute()) + ":" +
-                      String(dt.second());
-
-        date += " - " + String(rtc->rtc.now().unixtime());
+        char buffer[20];
+        snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+                 dt.year(), dt.month(), dt.day(),
+                 dt.hour(), dt.minute(), dt.second());
+        String date = String(buffer);
+        // String date = String(dt.year()) + "/" +
+        //               String(dt.month()) + "/" +
+        //               String(dt.day()) + " " +
+        //               String(dt.hour()) + ":" +
+        //               String(dt.minute()) + ":" +
+        //               String(dt.second());
+        date += " - UNIX : " + String(rtc->rtc.now().unixtime());
         return (date);
     }
     if (var == "ID") {
@@ -515,6 +519,11 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
         String message = (char *)data;
         prints = JsonDocument();
         prints["print"] = message;
+        int year, month, day, hour, minute, second;
+        if (sscanf((char *)data, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6) {
+            rtc->rtc.adjust(DateTime(year, month, day, hour, minute, second));
+            Serial.println("RTC updated!");
+        }
 
         if (message == "on") {
             pins->color[0] = pins->bright;
