@@ -151,6 +151,6 @@ void mainPicot() {
 }
 
 void loop() {
-    // LDCTest();
+    // LDCTest(); //test push (GLE)
     charge.routinecharge(&mainPicot);
 }
