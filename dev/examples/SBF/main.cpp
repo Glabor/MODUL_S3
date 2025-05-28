@@ -33,7 +33,7 @@ void testBin() {
     else{
         name="/test_sync.sbf";
     }
-    binFile file(name);
+    binFile file;
     measurement lsm;
     lsm.addField(field("time","microsecond",UNSIGNED_4BYTES_L,1));
     lsm.addField(field("acc_x","m/s^-2",FLOAT,1));
@@ -65,29 +65,32 @@ void testBin() {
     file.bind("time",&t);
     uint32_t v=0;
     file.bind("sick",&v);    
-    sensors_event_t accel;
-    sensors_event_t gyro;
-    sensors_event_t temp;
-    file.bind("acc_x",&accel.acceleration.x);
-    file.bind("acc_y",&accel.acceleration.y);
-    file.bind("acc_z",&accel.acceleration.z);
-    file.bind("gyro_x",&gyro.gyro.x);
-    file.bind("gyro_y",&gyro.gyro.y);
-    file.bind("gyro_z",&gyro.gyro.z);
+    file.bind("acc_x",&cap.accel.acceleration.x);
+    file.bind("acc_y",&cap.accel.acceleration.y);
+    file.bind("acc_z",&cap.accel.acceleration.z);
+    file.bind("gyro_x",&cap.gyro.gyro.x);
+    file.bind("gyro_y",&cap.gyro.gyro.y);
+    file.bind("gyro_z",&cap.gyro.gyro.z);
     file.header.addMetaData("date",rtc.rtc.now());
     file.header.addMetaData("bat",cap.measBatt());
     file.header.addMetaData("temp",rtc.rtc.getTemperature());
     file.header.addMetaData("id",id);
     file.header.addMetaData("radius",R);
     file.header.print();
-    file.writeHeader();
-    cap.lsmSetup();
+    file.writeHeader(name);
+    //if(!cap.lsmSetup()){return;}
+    if (!cap.dsox.begin_I2C()) {
+        Serial.println("LSM not found");
+        return;
+    };
+    Serial.println("LSM ok");
     analogReadResolution(12);
     digitalWrite(pins.ON_SICK, HIGH);
     Serial.println("start measure");
     //while(millis()-t0<10000){
     for(int k=0;k<1000;k++){
-        cap.dsox.getEvent(&accel, &gyro, &temp);
+        sensors_event_t event;
+        cap.dsox.getEvent(&cap.accel, &cap.gyro, &cap.temp);
         file.writeMeasurement(0);
         for(int i=0;i<100;i++){
             t  =micros();
