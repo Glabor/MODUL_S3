@@ -5,6 +5,8 @@
 #include "patinagePicots.h"
 #include "usurePicots.h"
 #include "comptagePicots.h"
+#include "binfile.h"
+
 class algoPicots{
 public:
 bool runFromFile(float omega, int r, int R,String path);

@@ -94,8 +94,7 @@ public:
 };
 class binFile {
 public:
-    binFile(String path) {
-        name = path;
+    binFile() {
     }
     binHeader header;
     void bind(String key,float* value){
@@ -134,11 +133,13 @@ public:
         }  
         Serial.println(key+": "+String(found)+"fields found");
     }
-    void readHeader() {
+    void readHeader(String path) {
+        name = path;
         inFile = SD_MMC.open(name, FILE_READ);
         header.read(inFile);
     };
-    void writeHeader() {
+    void writeHeader(String path) {
+        name = path;
         outFile = SD_MMC.open(name, FILE_WRITE);
         header.write(outFile);
     };
@@ -159,32 +160,6 @@ public:
             updateInd();
         }
     };
-
-    /*void readMeasurement(int indM) {
-        for (int i = 0; i < header.measData[indM].nCol;i++) {
-            String key = header.measData[indM].Fields[i].name;
-            dataType code = header.measData[indM].Fields[i].typeCode;
-            if (values.count(key) > 0) {
-                valueRead(values[key], code, inFile);
-            }
-            else {
-                long fill = 0;
-                outFile.write((char*)&fill, getL(code));//remplissage
-            }
-        }
-    };
-    uint8_t readMeasurement() {
-        uint8_t indM = 0;
-        if (header.async) {
-            inFile.read((char*)&indM, 1);
-        }
-        else {
-            indM = indMeas;
-            updateInd();
-        }
-        readMeasurement(indM);
-        return indM;
-    };*/
     void close() {
         outFile.flush();
         outFile.close();

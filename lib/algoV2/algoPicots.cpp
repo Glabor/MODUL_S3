@@ -35,16 +35,17 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
         omega=getW(path);
         Serial.println("rotation from file: "+String(omega));
     }
-    File inFile=SD_MMC.open(path,FILE_READ);
-    if(!inFile){
+    //File inFile=SD_MMC.open(path,FILE_READ);
+    binFile file;
+    file.readHeader(path);
+    if(!file.inFile){
         error="cannot open file";
         return false;
     }
     int long t0=millis();
-    nmeas=inFile.size()/2/308;
+    nmeas=(file.inFile.size()-file.header.headerLength)/2/308;
     
-
-    inFile=SD_MMC.open(path,FILE_READ);
+    //inFile=SD_MMC.open(path,FILE_READ);
     float perf=2*M_PI*float(r)/float(R)/omega*1000000/float(nd);
     fil=new filtreSick;
     fil->init(0.8, long(perf), 1200);
@@ -63,16 +64,16 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
     float ax, ay, az, gx, gy, gz, v,anglef;
     unsigned long t;
     bool first = true;
-    angle rot=angle(nullptr,"");
+    angle rot=angle(nullptr,"etrier17");
     for (int i = 0; i < nmeas; i++) {
-        t=timestampRead(inFile);
+        t=timestampRead(file.inFile);
         Serial.println(t);
-        ax=float(read(inFile)/100);
-        ay=float(read(inFile)/100);
-        az=float(read(inFile)/100);
-        gx=float(read(inFile)/100);
-        gy=float(read(inFile)/100);
-        gz=float(read(inFile)/100);
+        ax=float(read(file.inFile)/100);
+        ay=float(read(file.inFile)/100);
+        az=float(read(file.inFile)/100);
+        gx=float(read(file.inFile)/100);
+        gy=float(read(file.inFile)/100);
+        gz=float(read(file.inFile)/100);
         if (first) {
             Serial.println("init");
             Serial.print("omega = ");
@@ -88,8 +89,8 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
             anglef=rot.correctionangle(0.1,ax, ay, az, gx, gy, gz, t);
         }
         for (int j = 0; j < 100; j++) {
-			t=timestampRead(inFile);
-			v = read(inFile);
+			t=timestampRead(file.inFile);
+			v = read(file.inFile);
 			anglef=rot.updateangle(t);
             int n = fil->newVal(v, t);
 			for (int k = 1; k <= n;k++) {
@@ -107,26 +108,29 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
         }
     }
     patinage->compressprofil();
+    file.close();
     return true;
 }
 float algoPicots::getW(String path){
-    File infile=SD_MMC.open(path,FILE_READ);
-    if(!infile){
+    binFile file;
+    file.readHeader(path);
+    //File infile=SD_MMC.open(path,FILE_READ);
+    if(!file.inFile){
         error="cannot open file";
         return 0;
     }
-    nmeas=infile.size()/2/308;
+    nmeas=(file.inFile.size()-file.header.headerLength)/2/308;
     if(nmeas==0){return 0;}
     long Gx=0;
     long Gy=0;
     long Gz=0;
     for (int i = 0; i < nmeas; i++) {
-        skip(infile,10);
-        Gx+=read(infile);
-        Gy+=read(infile);
-        Gz+=read(infile);
-        skip(infile,600);
+        skip(file.inFile,10);
+        Gx+=read(file.inFile);
+        Gy+=read(file.inFile);
+        Gz+=read(file.inFile);
+        skip(file.inFile,600);
     }
-    infile.close();
+    file.close();
     return sqrt(pow(float(Gx)/float(nmeas)/100.0,2)+pow(float(Gy)/float(nmeas)/100.0,2)+pow(float(Gz)/float(nmeas)/100.0,2));
 }

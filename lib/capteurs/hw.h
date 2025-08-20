@@ -10,7 +10,7 @@ public:
     void Write(byte thisRegister, byte thisValue);
     int adc1 = -1, adc2 = -1, adc3 = -1, set = -1;
     int r = 0;
-
+    bool SR_pwm(File inFile,bool flush);
 private:
     pinout *pins = nullptr;
     int result = 0x37; // register selection where the ADC result is stored

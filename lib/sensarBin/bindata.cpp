@@ -11,7 +11,7 @@ static num numRead(dataType code,File inFile){
         for(int i=l-1;i>=0;i--){
             inFile.readBytes(n.bytes+i,1);
         }
-        if(isSigned(code)){
+        if(isSigned(code)&&n.bytes[l-1]&0b10000000){
             for(int i=l;i<4;i++){
                 n.bytes[i]=0xff;
             }
@@ -19,6 +19,11 @@ static num numRead(dataType code,File inFile){
     }
     else{
         inFile.readBytes(n.bytes,l);
+        if(isSigned(code)&&n.bytes[4-l]&0b10000000){
+            for(int i=0;i<4-l;i++){
+                n.bytes[i]=0xff;
+            }
+        }
     }
     return n;
 }
@@ -134,7 +139,7 @@ field::field(String nm,String u, dataType code, float m){
     multiplier = m;
     nameLength = name.length()+1;
     unitLength = unit.length()+1;
-    length = nameLength + unitLength + 3;
+    length = nameLength + unitLength + 5;
 };
 field::field(File inFile) {
     uint8_t n;
