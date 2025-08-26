@@ -15,6 +15,10 @@
 #include <SD_MMC.h>
 // #include "rtcClass.h"
 #include "comLORA.h"
+
+#include <iostream>
+#include <vector>
+
 class charger {
 public:
     charger(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, capteurs *c, AsyncWebServer *s, AsyncWebSocket *w, comLORA *l);
@@ -27,7 +31,13 @@ public:
     int sendSens(String type);
     int httpPostRequest(String serverName, String postText);
     String host = "http://LAPTOP-TF0BBSC1:5000";
-    bool dirClear(String path);
+    struct Parameter {
+        String name;
+        String value;
+        String pref;
+    };
+    std::vector<Parameter> params;
+    int numParams;
 
 private:
     pinout *pins;
@@ -47,6 +57,11 @@ private:
     int manageLoop();
     void normalTask();
 
+
+    void newParam(String pref, String def, String name);
+    void updateParam(String pref, String def, String name);
+    void initParams();
+    void sendParameterList(AsyncWebSocketClient *client);
 
     // Replace with your network credentials
     String ssid = "GL-AR300M-c40";
@@ -85,7 +100,7 @@ private:
     long loopTO = 0;
     long wsTO = 0;
     long blinkTO = 0;
-    int wsDelay = 100;
+    int wsDelay = 500;
     bool taskDone = false;
     void callbaque(AsyncWebServerRequest *request);
     bool testlora = false;
