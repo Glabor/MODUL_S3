@@ -27,6 +27,7 @@ public:
     int sendSens(String type);
     int httpPostRequest(String serverName, String postText);
     String host = "http://LAPTOP-TF0BBSC1:5000";
+    bool dirClear(String path);
 
 private:
     pinout *pins;
@@ -45,11 +46,11 @@ private:
     void loopWS();
     int manageLoop();
     void normalTask();
-    bool dirClear(String path);
+
 
     // Replace with your network credentials
-    String ssid = "SENSAR_OSLO";
-    String password = "12345678";
+    String ssid = "GL-AR300M-c40";
+    String password = "goodlife";
 
     String soft_ap_ssid = "MyESP32AP";
     String soft_ap_password = "testpassword";

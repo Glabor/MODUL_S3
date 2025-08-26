@@ -68,6 +68,18 @@ bool capteurs::bmeSetup(){
         Serial.println("Could not find a valid BME280 sensor, check wiring!");
         return false;
     }
+    bme.setSampling(Adafruit_BME280::MODE_FORCED,
+                    Adafruit_BME280::SAMPLING_X16,   // temperature
+                    Adafruit_BME280::SAMPLING_X16, // pressure
+                    Adafruit_BME280::SAMPLING_X16,   // humidity
+                    Adafruit_BME280::FILTER_OFF );
+    bool btake=bme.takeForcedMeasurement();
+    float t=bme.readTemperature();
+    float p=bme.readPressure()/100000.0;
+    float u=bme.readHumidity();
+    Serial.println("temperature "+String(t)+"*C");
+    Serial.println("pression "+String(p)+"Bar");
+    Serial.println("humidity "+String(u)+"%");
     return true;
 }
 bool capteurs::adxlSetup(void) {
@@ -219,10 +231,16 @@ void capteurs::mesurePicot(long senstime) {
     w0 = rot->wheelRot2();
     String fn = getName("picot");
     newName = fn;
+    preferences->begin("prefid", false);
+    int rm = preferences->getUInt("RAYONMOLETTE", 229);
+    int R = preferences->getUInt("radius", 4500);
+    preferences->end();
     //File file = SD_MMC.open(fn, FILE_WRITE);
     file=binFile();
     file.header.addMetaData("date",rtc->rtc.now());
     file.header.addMetaData("id",id);
+    file.header.addMetaData("r_molette",rm);
+    file.header.addMetaData("r_profil",R);
     measurement lsm;
     lsm.addField(field("time","microsecond",UNSIGNED_4BYTES_B,1));
     lsm.addField(field("acc_x","m/s^-2",SIGNED_2BYTES_B,100));
@@ -242,10 +260,13 @@ void capteurs::mesurePicot(long senstime) {
     unsigned long time0 = micros();
     unsigned long ta_micro;
     file.writeHeader(fn);
+    file.header.print();
     if (!file.outFile) {
         return;
     }
+    int nc=0;
     while (millis() < t0 + senstime * 1000) {
+        nc++;
         ta_micro = micros() - time0;
         for (size_t j = 0; j < 4; j++) {
             sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
@@ -264,7 +285,8 @@ void capteurs::mesurePicot(long senstime) {
                 r++;
             }
             getSens("sick");
-            for (int j = 0; j < r; j++) {
+            for (size_t j = 0; j < r; j++) {
+            
                 file.outFile.write(sdBuf[j]);
             }
             r = 0;
@@ -273,6 +295,8 @@ void capteurs::mesurePicot(long senstime) {
     wf = rot->w;
     file.close();
     digitalWrite(pins->ON_SICK, LOW);
+    Serial.print("measurement done: nb de cycles ");
+    Serial.println(nc);
 }
 
 void capteurs::mesureRipper(long senstime, String sens) {
@@ -497,8 +521,7 @@ void capteurs::getSens(String sens) {
         float val1 = 0;
         while ((micros() - micros1) < 1000) {
             count1++;
-            val1 = (float)((val1 * (count1 - 1) + (float)analogRead(pins->SICK1)) /
-                           (float)count1); // read adc
+            val1 = (float)((val1 * (count1 - 1) + (float)analogRead(pins->SICK1)) / (float)count1); // read adc
         }
         v = (uint32_t)val1;
         accBuffering(v);

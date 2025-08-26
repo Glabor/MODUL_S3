@@ -86,7 +86,7 @@ public:
         for (int i = 0; i < nbMeta; i++) {
             metaDatas[i].print();
         }
-        Serial.println(String(nbMeta)+" MEASUREMENTS:");
+        Serial.println(String(nbMeas)+" MEASUREMENTS:");
         for (int i = 0; i < nbMeas; i++) {
             measData[i].print(i);
         }

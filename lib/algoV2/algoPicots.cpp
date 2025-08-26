@@ -29,6 +29,7 @@ unsigned long timestampRead(File inFile){
     inFile.readBytes((char*)&t3, sizeof(t3));
     inFile.readBytes((char*)&t4, sizeof(t4)); 
     return t1<<24|t2<<16|t3<<8|t4;
+    //return t4<<24|t3<<16|t2<<8|t1;
 }
 bool algoPicots::runFromFile(float omega, int r, int R,String path){
     if(omega==0){
@@ -38,13 +39,15 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
     //File inFile=SD_MMC.open(path,FILE_READ);
     binFile file;
     file.readHeader(path);
+    file.header.print();
     if(!file.inFile){
         error="cannot open file";
         return false;
     }
     int long t0=millis();
     nmeas=(file.inFile.size()-file.header.headerLength)/2/308;
-    
+    Serial.print("nb de cycles: ");
+    Serial.println(nmeas);
     //inFile=SD_MMC.open(path,FILE_READ);
     float perf=2*M_PI*float(r)/float(R)/omega*1000000/float(nd);
     fil=new filtreSick;
@@ -67,13 +70,13 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
     angle rot=angle(nullptr,"etrier17");
     for (int i = 0; i < nmeas; i++) {
         t=timestampRead(file.inFile);
-        Serial.println(t);
-        ax=float(read(file.inFile)/100);
-        ay=float(read(file.inFile)/100);
-        az=float(read(file.inFile)/100);
-        gx=float(read(file.inFile)/100);
-        gy=float(read(file.inFile)/100);
-        gz=float(read(file.inFile)/100);
+        Serial.println(t/1000);
+        ax=float(read(file.inFile))/100;
+        ay=float(read(file.inFile))/100;
+        az=float(read(file.inFile))/100;
+        gx=float(read(file.inFile))/100;
+        gy=float(read(file.inFile))/100;
+        gz=float(read(file.inFile))/100;
         if (first) {
             Serial.println("init");
             Serial.print("omega = ");
@@ -109,6 +112,7 @@ bool algoPicots::runFromFile(float omega, int r, int R,String path){
     }
     patinage->compressprofil();
     file.close();
+    Serial.println("algo done");
     return true;
 }
 float algoPicots::getW(String path){

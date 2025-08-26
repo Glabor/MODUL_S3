@@ -61,7 +61,7 @@ private:
 
     // Adafruit_ADXL375 adxl = Adafruit_ADXL375(ADXL375_CS, &SPI, 12345);
 
-    byte sdBuf[200];
+    byte sdBuf[100];
     int r = 0;
 };
 

@@ -122,7 +122,7 @@ String strRead(File inFile) {
     inFile.readBytes((char*)&length, 1);
     char c;
     for (int i = 0; i < length; i++) {
-        str += inFile.readString();
+        str += char(inFile.read());
     }
     return str;
 }
