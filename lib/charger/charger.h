@@ -100,7 +100,7 @@ private:
     long loopTO = 0;
     long wsTO = 0;
     long blinkTO = 0;
-    int wsDelay = 100;
+    int wsDelay = 500;
     bool taskDone = false;
     void callbaque(AsyncWebServerRequest *request);
     bool testlora = false;

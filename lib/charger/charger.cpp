@@ -437,8 +437,8 @@ bool charger::wifiConnect() {
     int count1 = 0;
     int count2 = 0;
 
-    preferences->begin("prefid", false);
-    int idRead = preferences->getUInt("id", 0);
+    preferences->begin("struct", false);
+    int idRead = preferences->getString("ID", "0").toInt();
     preferences->end();
 
     if (ssid == "SENSAR_OSLO") {
@@ -709,12 +709,12 @@ void charger::setup() {
     initParams();
 
     pinMode(pins->BOOT0, INPUT_PULLUP);
-    preferences->begin("prefid", false);
-    cap->id = preferences->getUInt("id", 0);
-    blink = preferences->getUInt("blink", 5);
+    preferences->begin("struct", false);
+    cap->id = preferences->getString("ID", "0").toInt();
+    blink = preferences->getString("BLINK", "5").toInt();
     ssid = preferences->getString("SSID", ssid);
     password = preferences->getString("PWD", password);
-    host = preferences->getString("host", host);
+    host = preferences->getString("HOST", host);
     preferences->end();
     serverRoutes();
     ElegantOTA.begin(server); // Start ElegantOTA
@@ -886,8 +886,8 @@ int charger::manageLoop() {
     } else {
         if (!rtc->chg) {
             // sleep
-            preferences->begin("prefid", false);
-            int idRead = preferences->getUInt("sleepNoMeas", 33);
+            preferences->begin("struct", false);
+            int idRead = preferences->getString("SLEEPNOMEAS", "2").toInt();
             preferences->end();
             rtc->goSleep(idRead * 60);
         } else {

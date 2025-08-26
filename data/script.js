@@ -54,20 +54,19 @@ function onMessage(event) {
   try {
     parameters = JSON.parse(event.data);
     console.log(parameters);
-    if (!Array.isArray(parameters)) {
+    if (Array.isArray(parameters)) {
       console.error("Received data is not an array:", parameters);
+      let select = document.getElementById("paramSelect");
+      select.innerHTML = "";
+      parameters.forEach((param) => {
+        let option = document.createElement("option");
+        option.value = param.name;
+        option.textContent = param.name;
+        select.appendChild(option);
+      });
+      updateDisplay();
       return;
     }
-
-    let select = document.getElementById("paramSelect");
-    select.innerHTML = "";
-    parameters.forEach((param) => {
-      let option = document.createElement("option");
-      option.value = param.name;
-      option.textContent = param.name;
-      select.appendChild(option);
-    });
-    updateDisplay();
   } catch (error) {
     console.error("JSON parsing error:", error);
   }
