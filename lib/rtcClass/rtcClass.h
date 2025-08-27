@@ -87,6 +87,41 @@ public:
         logFile.flush();
         logFile.close();
     }
+    void logBME(float batvolt, bool waitingtrans = false, float w = 0,float t=0,float p=0,float u=0) {
+        float RTCtemp = rtc.getTemperature();
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+        if (logFile) {
+            logFile.print("\n");
+            logFile.print("ON : ");
+            logFile.println(dateRTC(rtc.now()));
+            logFile.print("bat");
+            logFile.print(String(batvolt));
+            logFile.println("V");
+            logFile.print("RTC temp: ");
+            logFile.println(String(RTCtemp));
+            logFile.print("RDC speed: ");
+            logFile.print(String(w / 2 / M_PI * 60));
+            logFile.println("rpm");
+            logFile.println("temperature "+String(t)+"*C");
+            logFile.println("pression "+String(p)+"Bar");
+            logFile.println("humidity "+String(u)+"%");
+            if (abs(w) < M_PI / 60) {
+                logFile.println("back to sleep");
+            } // 0.5RPM
+            else {
+                if (waitingtrans) {
+                    preferences->begin("prefid", false);
+                    logFile.print("begin transmission: ");
+                    logFile.println(preferences->getString("NEWNAME", ""));
+                    preferences->end();
+                } else {
+                    logFile.println("begin measurement");
+                }
+            }
+        }
+        logFile.flush();
+        logFile.close();
+    }
     void goSleepMinuteFixe(int sleepMinutes, int minute) {
         DateTime d0 = rtc.now();
         DateTime d1 = DateTime(d0.year(), d0.month(), d0.day(), d0.hour(), minute, 0);

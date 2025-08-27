@@ -8,3 +8,5 @@ dev/sensFiles
 .vscode
 GLE
 .vscode/settings.json
+
+dev/readBin.ipynb
