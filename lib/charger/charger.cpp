@@ -382,6 +382,35 @@ int charger::sendFlask() {
     return responseCode;
 }
 
+int charger::POSTNew() {
+    // Open the file from SD_MMC
+    File file = SD_MMC.open(cap->newName);
+    if (!file) {
+        Serial.println("Failed to open file");
+        return 0;
+    }
+    HTTPClient http;
+    http.begin(host + "/upload");
+    http.addHeader("Content-Type", "application/octet-stream");
+
+    // Send the file in chunks to avoid memory issues
+    size_t fileSize = file.size();
+    size_t chunkSize = 1024; // 1KB chunks
+    uint8_t buffer[chunkSize];
+
+    int httpResponseCode = http.sendRequest("POST", &file, fileSize);
+
+    if (httpResponseCode > 0) {
+        Serial.printf("File sent successfully. Response code: %d\n", httpResponseCode);
+    } else {
+        Serial.printf("Error sending file. Error: %s\n", http.errorToString(httpResponseCode).c_str());
+    }
+
+    file.close();
+    http.end();
+    return (1);
+}
+
 int charger::sendSens(String type) {
     JsonDocument info;
     bool bWifi = true;

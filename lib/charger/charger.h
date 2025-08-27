@@ -28,6 +28,7 @@ public:
     void initWebSocket();
     void serverRoutes();
     bool wifiConnect();
+    int POSTNew();
     int sendSens(String type);
     int httpPostRequest(String serverName, String postText);
     String host = "http://LAPTOP-TF0BBSC1:5000";
