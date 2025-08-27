@@ -56,7 +56,7 @@ private:
     void loopWS();
     int manageLoop();
     void normalTask();
-    bool dirClear(String path);
+
 
     void newParam(String pref, String def, String name);
     void updateParam(String pref, String def, String name);
@@ -64,8 +64,8 @@ private:
     void sendParameterList(AsyncWebSocketClient *client);
 
     // Replace with your network credentials
-    String ssid = "SENSAR_OSLO";
-    String password = "12345678";
+    String ssid = "GL-AR300M-c40";
+    String password = "goodlife";
 
     String soft_ap_ssid = "MyESP32AP";
     String soft_ap_password = "testpassword";

@@ -494,6 +494,7 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         data[len] = 0;
         String message = (char *)data;
+
         int sep = message.indexOf(':');
         Serial.println(message);
         if (sep != -1) {
