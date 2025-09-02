@@ -28,9 +28,11 @@ public:
     void initWebSocket();
     void serverRoutes();
     bool wifiConnect();
-    int POSTNew();
+    int POSTNew(String meta);
     int sendSens(String type);
     int httpPostRequest(String serverName, String postText);
+    bool dirClear(String path);
+
     String host = "http://LAPTOP-TF0BBSC1:5000";
     struct Parameter {
         String name;
@@ -57,7 +59,6 @@ private:
     void loopWS();
     int manageLoop();
     void normalTask();
-
 
     void newParam(String pref, String def, String name);
     void updateParam(String pref, String def, String name);

@@ -382,7 +382,7 @@ int charger::sendFlask() {
     return responseCode;
 }
 
-int charger::POSTNew() {
+int charger::POSTNew(String measType) {
     // Open the file from SD_MMC
     File file = SD_MMC.open(cap->newName);
     if (!file) {
@@ -392,6 +392,7 @@ int charger::POSTNew() {
     HTTPClient http;
     http.begin(host + "/upload");
     http.addHeader("Content-Type", "application/octet-stream");
+    http.addHeader("X-Metadata", "{\"device_id\":\"" + String(cap->id) + "\", \"meastype\": \"" + measType + "\"}"); // Custom header
 
     // Send the file in chunks to avoid memory issues
     size_t fileSize = file.size();
@@ -404,6 +405,7 @@ int charger::POSTNew() {
         Serial.printf("File sent successfully. Response code: %d\n", httpResponseCode);
     } else {
         Serial.printf("Error sending file. Error: %s\n", http.errorToString(httpResponseCode).c_str());
+        return 0;
     }
 
     file.close();
@@ -604,131 +606,7 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
                 cap->bADXL = !cap->bADXL;
                 cap->adxl->printSensorDetails();
                 Serial.println("");
-            } else {
-                // // JSONVar myObject = JSON.parse((char *)data);
-                // JsonDocument myObject;
-                // deserializeJson(myObject, data);
-                // // from https://github.com/arduino-libraries/Arduino_JSON/blob/master/examples/JSONObject/JSONObject.ino
-                // if (myObject.containsKey("id")) {
-                //     prints["print"] = String((const char *)myObject["id"]).toInt();
-
-                //     cap->id = String((const char *)myObject["id"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("id", cap->id);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("blink")) {
-                //     prints["print"] = String((const char *)myObject["blink"]).toInt();
-
-                //     blink = String((const char *)myObject["blink"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("blink", blink);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("sleep")) {
-                //     prints["print"] = String((const char *)myObject["sleep"]).toInt();
-
-                //     int sleep = String((const char *)myObject["sleep"]).toInt();
-                //     cap->genVar = sleep; // measure duration pour le savesens
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("sleep", sleep);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("radius")) {
-                //     prints["print"] = String((const char *)myObject["radius"]).toInt();
-
-                //     int radius = String((const char *)myObject["radius"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("radius", radius);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("sleepMeas")) {
-                //     prints["print"] = String((const char *)myObject["sleepMeas"]).toInt();
-
-                //     int sleepMeas = String((const char *)myObject["sleepMeas"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("sleepMeas", sleepMeas);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("sleepNoMeas")) {
-                //     prints["print"] = String((const char *)myObject["sleepNoMeas"]).toInt();
-
-                //     int sleepNoMeas = String((const char *)myObject["sleepNoMeas"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("sleepNoMeas", sleepNoMeas);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("measTime")) {
-                //     prints["print"] = String((const char *)myObject["measTime"]).toInt();
-
-                //     int measTime = String((const char *)myObject["measTime"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("measTime", measTime);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("transTime")) {
-                //     prints["print"] = String((const char *)myObject["transTime"]).toInt();
-
-                //     int transTime = String((const char *)myObject["transTime"]).toInt();
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putUInt("transTime", transTime);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("toolNum")) {
-                //     /*prints["print"] = String((const char *)myObject["toolNum"]);
-
-                //     String toolNum = (const char *)myObject["toolNum"];
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putString("toolNum", toolNum);
-                //     preferences->end();*/
-                //     String toolNum = (const char *)myObject["toolNum"];
-                //     if (rtc->setForceWakeupDate(toolNum)) {
-                //         prints["print"] = String((const char *)myObject["toolNum"]);
-                //     } else {
-                //         prints["print"] = "error";
-                //     }
-                // }
-                // if (myObject.containsKey("ssid")) {
-                //     prints["print"] = String((const char *)myObject["ssid"]);
-
-                //     ssid = (const char *)myObject["ssid"];
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putString("SSID", ssid);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("pwd")) {
-                //     prints["print"] = String((const char *)myObject["pwd"]);
-
-                //     password = (const char *)myObject["pwd"];
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putString("PWD", password);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("host")) {
-                //     prints["print"] = String((const char *)myObject["host"]);
-
-                //     host = (const char *)myObject["host"];
-
-                //     preferences->begin("prefid", false);
-                //     preferences->putString("host", host);
-                //     preferences->end();
-                // }
-                // if (myObject.containsKey("gen")) {
-                //     prints["print"] = String((const char *)myObject["gen"]).toInt();
-                //     cap->genVar = String((const char *)myObject["gen"]).toInt();
-                // }
             }
-
             String stringPrints;
             serializeJson(prints, stringPrints);
             ws->textAll(stringPrints);
