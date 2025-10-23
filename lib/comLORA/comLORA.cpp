@@ -1,6 +1,6 @@
 #include "comLORA.h"
 
-comLORA::comLORA(pinout *p, capteurs *c,Preferences *pr) {
+comLORA::comLORA(pinout *p, capteurs *c, Preferences *pr) {
     preferences = pr;
     pins = p;
     cap = c;
@@ -51,15 +51,15 @@ bool comLORA::rf95Setup(void) {
     return rfSetup;
 }
 void comLORA::pinSetup() {
-    pinMode(pins->RFM95_CS, OUTPUT);                                                                                                                                                                                                                                     
+    pinMode(pins->RFM95_CS, OUTPUT);
     pinMode(pins->RFM95_INT, INPUT);
     pinMode(pins->RFM95_RST, OUTPUT);
 }
 
 void comLORA::rfSend(String message) {
-    preferences->begin("prefid", false);
-    int id=preferences->getUInt("id", 99);
-    String mess2Send = "TT";//message texte
+    preferences->begin("struct", false);
+    int id = preferences->getUInt("ID", 99);
+    String mess2Send = "TT"; // message texte
     preferences->end();
     mess2Send += message;
     // send a message using radio module
@@ -68,7 +68,7 @@ void comLORA::rfSend(String message) {
     int bufSize = mess2Send.length() + 1;
     char Buf[bufSize];
     mess2Send.toCharArray(Buf, bufSize);
-    Buf[0]=id;
+    Buf[0] = id;
     rf95->send((uint8_t *)Buf, bufSize);
     rf95->waitPacketSent();
 }
@@ -85,8 +85,8 @@ void comLORA::rafale(byte *message, int length, int id) {
     bool stopBool = false;
     rf95Setup();
     cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
-    cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z,micros());
-    int ns=0;
+    cap->rot->initangle(cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z, micros());
+    int ns = 0;
     while (((millis() - transmilli0) < transmitTime * 1000) && !stopBool) {
         cap->dsox.getEvent(&cap->accel, &cap->gyro, &cap->temp);
         /*if (cap->accel.acceleration.x != 0) {
@@ -95,7 +95,7 @@ void comLORA::rafale(byte *message, int length, int id) {
         {
             alpha = atan2(cap->accel.acceleration.y, cap->accel.acceleration.x * sqrt(sq(cap->accel.acceleration.x) + sq(cap->accel.acceleration.z)) / abs(cap->accel.acceleration.x + 0.01));
         }*/
-        float alpha_deg =cap->rot->correctionangle(0.1,cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z,micros());
+        float alpha_deg = cap->rot->correctionangle(0.1, cap->accel.acceleration.x, cap->accel.acceleration.y, cap->accel.acceleration.z, cap->gyro.gyro.x, cap->gyro.gyro.y, cap->gyro.gyro.z, micros());
         if ((alpha_deg - prevAng) > 300) { // decrement turn counter if too great difference with previous angle
             turnNumber--;
         }
@@ -135,9 +135,9 @@ void comLORA::rafale(byte *message, int length, int id) {
             rf95->send(message, length + 3);
             ns++;
             rf95->waitPacketSent();
-            //Serial.println("sent");
+            // Serial.println("sent");
             sentTime = millis();
         }
     }
-    Serial.println("rafale ended: "+String(ns)+" messages sent");
+    Serial.println("rafale ended: " + String(ns) + " messages sent");
 }
