@@ -111,10 +111,24 @@ void lire() {
     Serial.println();
     delay(100);
 }
-void capteurs::mesureLisse(long senstime) {
+
+void capteurs::mesureLisse(long senstime, capteurs::Metadata meta) {
+    Serial.println("#############");
+    Serial.print("Meta speed = ");
+    Serial.println(meta.speed);
+    Serial.print("Meta angle = ");
+    Serial.println(meta.initangle);
+    Serial.print("Meta ring = ");
+    Serial.println(meta.ring);
+
     file = binFile();
     file.header.addMetaData("date", rtc->rtc.now());
+    unsigned long time0 = micros();
     file.header.addMetaData("id", id);
+    file.header.addMetaData("speed", meta.speed);
+    file.header.addMetaData("initangle", meta.initangle);
+    file.header.addMetaData("ring", meta.ring);
+    file.header.addMetaData("timestamp", meta.timestamp);
     measurement lsm;
     lsm.addField(field("time", "microsecond", UNSIGNED_4BYTES_B, 1));
     lsm.addField(field("acc_x", "m/s^-2", SIGNED_2BYTES_B, 100));
@@ -137,7 +151,6 @@ void capteurs::mesureLisse(long senstime) {
     hmc.nRow = 10;
     file.header.addMeasurement(hmc);
     unsigned long t0 = millis();
-    unsigned long time0 = micros();
     unsigned long ta_micro;
     String fn = getName("lisse");
     newName = fn;
@@ -147,7 +160,7 @@ void capteurs::mesureLisse(long senstime) {
     Serial.println("begin lisse");
     r = 0;
     while (millis() < t0 + senstime * 1000) {
-        ta_micro = micros();
+        ta_micro = micros() - time0;
         for (size_t j = 0; j < 4; j++) {
             sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
             r++;
@@ -166,6 +179,7 @@ void capteurs::mesureLisse(long senstime) {
     file.close();
     Serial.println("end lisse");
 }
+
 void capteurs::HMRsetup() {
     digitalWrite(pins->ON_SICK, HIGH);
     Serial.println("HMRSetup");

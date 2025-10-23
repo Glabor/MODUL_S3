@@ -3,15 +3,15 @@
 
 #include "LDC.h"
 #include "angle.h"
+#include "binfile.h"
 #include "hw.h"
 #include "pinout.h"
 #include "rtcClass.h"
 #include <Adafruit_ADXL375.h>
-#include <Adafruit_LSM6DSO32.h>
 #include <Adafruit_BME280.h>
+#include <Adafruit_LSM6DSO32.h>
 #include <Preferences.h>
 #include <RTClib.h>
-#include "binfile.h"
 class capteurs {
 public:
     capteurs(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, String etrier);
@@ -29,7 +29,15 @@ public:
     void HMRsetup();
     void mesurePicot(long senstime);
     void mesureRipper(long senstime, String sens);
+    void mesureRSSI(long sensTime);
+    struct Metadata {
+        int speed = -1;
+        int initangle = -1;
+        int ring = -1;
+        int timestamp = -1;
+    };
     void mesureLisse(long senstime);
+    void mesureLisse(long senstime, Metadata meta);
     float w0; // rotation debut mesure
     float wf; // rotation fin mesure
     int genVar = 10;
@@ -49,10 +57,10 @@ public:
     LDC *ldc2 = nullptr;
     hw *HW = nullptr;
     String getName(String sens);
-    uint32_t v=0;// sick
+    uint32_t v = 0; // sick
 
 private:
-    uint32_t t_micro=0;
+    uint32_t t_micro = 0;
     binFile file;
     pinout *pins;
     rtcClass *rtc;

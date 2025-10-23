@@ -33,7 +33,7 @@ public:
     int httpPostRequest(String serverName, String postText);
     bool dirClear(String path);
 
-    String host = "http://LAPTOP-TF0BBSC1:5000";
+    String host = "http://SENSAR_TELT:5000";
     struct Parameter {
         String name;
         String value;

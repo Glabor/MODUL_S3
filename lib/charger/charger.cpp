@@ -356,6 +356,7 @@ int charger::httpPostRequest(String serverName, String postText) {
 int charger::sendFlask() {
     JsonDocument info;
     info["batt"] = cap->battSend;
+    info["temp"] = (int)(rtc->rtc.getTemperature()*100);
     info["bWifi"] = bWifi;
     info["etrNum"] = cap->id;
 
