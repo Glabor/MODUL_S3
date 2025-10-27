@@ -1,5 +1,52 @@
 #include "charger.h"
 // test
+
+void charger::newParam(String name, String def, String pref) {
+    preferences->begin("struct", true);
+    String val = preferences->getString(pref.c_str(), def);
+    Serial.println("name:" + name + ",val:" + val + ",pref:" + pref);
+    params.push_back({name, val, pref});
+    preferences->end();
+}
+
+void charger::initParams() {
+    params.clear();
+    newParam("ID", "0", "ID");
+    newParam("Measure duration (s)", "10", "DUR");
+    newParam("Tool radius (mm)", "4500", "RAD");
+    newParam("Forced wakeup date (yy/mm/dd)", "2015/01/01", "DATE");
+    newParam("Wifi SSID", "GL-AR300M-c40", "SSID");
+    newParam("Wifi password", "goodlife", "PWD");
+    newParam("Host Address", "http://192.168.216.106:5000", "HOST");
+    newParam("Sleep time after meas (h)", "1", "SLEEPMEAS");
+    newParam("Sleep time after no meas (min)", "45", "SLEEPNOMEAS");
+    newParam("Measure minute", "0", "MEASTIME");
+    newParam("Transmit minute", "10", "TRANSTIME");
+    // charger::Parameter id = {"ID", 0, "id"};
+    // charger::Parameter parameters[] = {
+    //     temp,
+    //     hum};
+    // std::vector<charger::Parameter> params = {id, dur, rad, date, ssid, pwd, host,
+    //                                           sleepMeas, sleepNoMeas, measTime, transTime};
+    // numParams = sizeof(parameters) / sizeof(parameters[0]);
+    numParams = params.size();
+    Serial.println(String(numParams) + " new parameters");
+}
+
+// Send parameters list to client
+void charger::sendParameterList(AsyncWebSocketClient *client) {
+    String json = "[";
+    for (int i = 0; i < numParams; i++) {
+        if (i > 0)
+            json += ",";
+        json += "{\"name\":\"" + params[i].name +
+                "\", \"value\":\"" + String(params[i].value) +
+                "\", \"pref\":\"" + String(params[i].pref) + "\"}";
+    }
+    json += "]";
+    client->text(json);
+}
+
 charger::charger(pinout *p, rtcClass *r, fs::FS &f, Preferences *pr, capteurs *c, AsyncWebServer *s, AsyncWebSocket *w, comLORA *l) {
     pins = p;
     rtc = r;
@@ -41,6 +88,7 @@ void charger::onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
     switch (type) {
     case WS_EVT_CONNECT:
         Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+        sendParameterList(client);
         break;
     case WS_EVT_DISCONNECT:
         Serial.printf("WebSocket client #%u disconnected\n", client->id());
@@ -106,109 +154,42 @@ bool charger::initSPIFFS() {
     return true;
 }
 String charger::processor(const String &var) {
+    // if value in a pref value in params
+    for (int i = 0; i < numParams; i++) {
+        if (params[i].pref == var) {
+            preferences->begin("struct", false);
+            String par = preferences->getString(var.c_str(), params[i].value);
+            preferences->end();
+            return par;
+        }
+    }
+
+    // get time from rtc
     if (var == "TIMESTAMP") {
         Serial.print(var);
         Serial.print(" : ");
         Serial.println(rtc->rtc.now().unixtime());
         DateTime dt = rtc->rtc.now();
-        String date = String(dt.year()) + "/" +
-                      String(dt.month()) + "/" +
-                      String(dt.day()) + " " +
-                      String(dt.hour()) + ":" +
-                      String(dt.minute()) + ":" +
-                      String(dt.second());
-
-        date += " - " + String(rtc->rtc.now().unixtime());
+        char buffer[20];
+        snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+                 dt.year(), dt.month(), dt.day(),
+                 dt.hour(), dt.minute(), dt.second());
+        String date = String(buffer);
+        // String date = String(dt.year()) + "/" +
+        //               String(dt.month()) + "/" +
+        //               String(dt.day()) + " " +
+        //               String(dt.hour()) + ":" +
+        //               String(dt.minute()) + ":" +
+        //               String(dt.second());
+        date += " - UNIX : " + String(rtc->rtc.now().unixtime());
         return (date);
     }
-    if (var == "ID") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("id", 0);
-        preferences->end();
 
-        return (String(idRead));
-    }
-    if (var == "BLINK") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("blink", 5);
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "SLEEP") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleep", 33);
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "RADIUS") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("radius", 0);
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "SLEEPMEAS") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleepMeas", 0); // sleep after measuring (h)
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "SLEEPNOMEAS") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleepNoMeas", 0); // sleep after not measuring (min)
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "MEASTIME") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("measTime", 0); // minute of the hour to wake up
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "TRANSTIME") {
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("transTime", 0); // minute of the hour to transmit
-        preferences->end();
-
-        return (String(idRead));
-    }
-    if (var == "TOOLNUM") {
-        // if(rtc->setForceWakeupDate(ssid)){}
-        /*preferences->begin("prefid", false);
-        String preftoolNum = preferences->getString("toolNum", ssid);
-        preferences->end();*/
-
-        return (rtc->getForceWakeupDate());
-    }
-    if (var == "SSID") {
-        preferences->begin("prefid", false);
-        String prefSSID = preferences->getString("SSID", ssid);
-        preferences->end();
-
-        return (String(prefSSID));
-    }
-    if (var == "PWD") {
-        preferences->begin("prefid", false);
-        String prefPWD = preferences->getString("PWD", password);
-        preferences->end();
-
-        return (String(prefPWD));
-    }
-    if (var == "HOST") {
-        preferences->begin("prefid", false);
-        String prefHost = preferences->getString("host", host);
-        preferences->end();
-
-        return (String(prefHost));
-    }
     if (var == "GENERAL") {
         return (String(cap->genVar)); // utilisee pour acctime
     }
+
+    // measure battery with adc
     if (var == "BATTERY") {
         return (String(cap->measBatt()) + "V   --   " + String(rtc->rtc.getTemperature()) + "&degC");
     }
@@ -375,6 +356,7 @@ int charger::httpPostRequest(String serverName, String postText) {
 int charger::sendFlask() {
     JsonDocument info;
     info["batt"] = cap->battSend;
+    info["temp"] = (int)(rtc->rtc.getTemperature()*100);
     info["bWifi"] = bWifi;
     info["etrNum"] = cap->id;
 
@@ -399,6 +381,37 @@ int charger::sendFlask() {
     }
     // connected flask off
     return responseCode;
+}
+
+int charger::POSTNew(String measType) {
+    // Open the file from SD_MMC
+    File file = SD_MMC.open(cap->newName);
+    if (!file) {
+        Serial.println("Failed to open file");
+        return 0;
+    }
+    HTTPClient http;
+    http.begin(host + "/upload");
+    http.addHeader("Content-Type", "application/octet-stream");
+    http.addHeader("X-Metadata", "{\"device_id\":\"" + String(cap->id) + "\", \"meastype\": \"" + measType + "\"}"); // Custom header
+
+    // Send the file in chunks to avoid memory issues
+    size_t fileSize = file.size();
+    size_t chunkSize = 1024; // 1KB chunks
+    uint8_t buffer[chunkSize];
+
+    int httpResponseCode = http.sendRequest("POST", &file, fileSize);
+
+    if (httpResponseCode > 0) {
+        Serial.printf("File sent successfully. Response code: %d\n", httpResponseCode);
+    } else {
+        Serial.printf("Error sending file. Error: %s\n", http.errorToString(httpResponseCode).c_str());
+        return 0;
+    }
+
+    file.close();
+    http.end();
+    return (1);
 }
 
 int charger::sendSens(String type) {
@@ -456,8 +469,8 @@ bool charger::wifiConnect() {
     int count1 = 0;
     int count2 = 0;
 
-    preferences->begin("prefid", false);
-    int idRead = preferences->getUInt("id", 0);
+    preferences->begin("struct", false);
+    int idRead = preferences->getString("ID", "0").toInt();
     preferences->end();
 
     if (ssid == "SENSAR_OSLO") {
@@ -513,199 +526,104 @@ void charger::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         data[len] = 0;
         String message = (char *)data;
-        prints = JsonDocument();
-        prints["print"] = message;
 
-        if (message == "on") {
-            pins->color[0] = pins->bright;
-            pins->color[1] = 0.;
-            pins->color[2] = pins->bright / 2;
-            neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-            testlora = true;
-        } else if (message == "off") {
-            pins->color[0] = 0.;
-            pins->color[1] = pins->bright;
-            pins->color[2] = pins->bright;
-            neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
-            testlora = false;
-            // neopixelWrite(LED, 0, bright, bright); // cyan
-        } else if (message == "alarm") {
-            rtc->goSleep(cap->genVar);
-        } else if (message == "restart") {
-            ESP.restart();
-        } else if (message == "sync") {
-            syncRTC();
-        } else if (message == "sick") {
-            cap->bSick = !cap->bSick;
-            digitalWrite(pins->ON_SICK, cap->bSick);
-            Serial.println("sick");
-        } else if (message == "wifi") {
-            Serial.println("wifi");
-        } else if (message == "angle") {
-            bAng = !bAng;
-            printInt = 0;
-        } else if (message == "RSSI") {
-            bRSSI = !bRSSI;
-            printInt = 0;
-        } else if (message == "ldc") {
-            bLDC = !bLDC;
-            printInt = 0;
-        } else if (message == "s_ldc") {
-            bS_LDC = true;
-        } else if (message == "hmc") {
-            bHMC = !bHMC;
-            printInt = 0;
-        } else if (message == "lsm") {
-            bLSM = !bLSM;
-            printInt = 0;
-        } else if (message == "s_lsm") {
-            bS_LSM = true;
-        } else if (message == "s_adxl") {
-            bS_ADXL = true;
-        } else if (message == "s_sick") {
-            bS_SICK = true;
-        } else if (message == "adxl") {
-            cap->bADXL = !cap->bADXL;
-            cap->adxl->printSensorDetails();
-            Serial.println("");
-        } else {
-            // JSONVar myObject = JSON.parse((char *)data);
-            JsonDocument myObject;
-            deserializeJson(myObject, data);
-            // from https://github.com/arduino-libraries/Arduino_JSON/blob/master/examples/JSONObject/JSONObject.ino
-            if (myObject.containsKey("id")) {
-                prints["print"] = String((const char *)myObject["id"]).toInt();
-
-                cap->id = String((const char *)myObject["id"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("id", cap->id);
-                preferences->end();
+        int sep = message.indexOf(':');
+        Serial.println(message);
+        if (sep != -1) {
+            int year, month, day, hour, minute, second;
+            if (sscanf((char *)data, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second) == 6) {
+                rtc->rtc.adjust(DateTime(year, month, day, hour, minute, second));
+                Serial.println("RTC updated!");
+                return;
             }
-            if (myObject.containsKey("blink")) {
-                prints["print"] = String((const char *)myObject["blink"]).toInt();
 
-                blink = String((const char *)myObject["blink"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("blink", blink);
-                preferences->end();
-            }
-            if (myObject.containsKey("sleep")) {
-                prints["print"] = String((const char *)myObject["sleep"]).toInt();
-
-                int sleep = String((const char *)myObject["sleep"]).toInt();
-                cap->genVar = sleep; // measure duration pour le savesens
-                preferences->begin("prefid", false);
-                preferences->putUInt("sleep", sleep);
-                preferences->end();
-            }
-            if (myObject.containsKey("radius")) {
-                prints["print"] = String((const char *)myObject["radius"]).toInt();
-
-                int radius = String((const char *)myObject["radius"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("radius", radius);
-                preferences->end();
-            }
-            if (myObject.containsKey("sleepMeas")) {
-                prints["print"] = String((const char *)myObject["sleepMeas"]).toInt();
-
-                int sleepMeas = String((const char *)myObject["sleepMeas"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("sleepMeas", sleepMeas);
-                preferences->end();
-            }
-            if (myObject.containsKey("sleepNoMeas")) {
-                prints["print"] = String((const char *)myObject["sleepNoMeas"]).toInt();
-
-                int sleepNoMeas = String((const char *)myObject["sleepNoMeas"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("sleepNoMeas", sleepNoMeas);
-                preferences->end();
-            }
-            if (myObject.containsKey("measTime")) {
-                prints["print"] = String((const char *)myObject["measTime"]).toInt();
-
-                int measTime = String((const char *)myObject["measTime"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("measTime", measTime);
-                preferences->end();
-            }
-            if (myObject.containsKey("transTime")) {
-                prints["print"] = String((const char *)myObject["transTime"]).toInt();
-
-                int transTime = String((const char *)myObject["transTime"]).toInt();
-
-                preferences->begin("prefid", false);
-                preferences->putUInt("transTime", transTime);
-                preferences->end();
-            }
-            if (myObject.containsKey("toolNum")) {
-                /*prints["print"] = String((const char *)myObject["toolNum"]);
-
-                String toolNum = (const char *)myObject["toolNum"];
-
-                preferences->begin("prefid", false);
-                preferences->putString("toolNum", toolNum);
-                preferences->end();*/
-                String toolNum = (const char *)myObject["toolNum"];
-                if (rtc->setForceWakeupDate(toolNum)) {
-                    prints["print"] = String((const char *)myObject["toolNum"]);
-                } else {
-                    prints["print"] = "error";
+            String paramName = message.substring(0, sep);
+            // float newValue = message.substring(sep + 1).toFloat();
+            String newValue = message.substring(sep + 1);
+            // Update parameter
+            for (int i = 0; i < numParams; i++) {
+                if (params[i].name == paramName) {
+                    params[i].value = newValue;
+                    preferences->begin("struct", false);
+                    int newPref = preferences->putString(params[i].pref.c_str(), newValue);
+                    preferences->end();
+                    Serial.println(newPref);
+                    Serial.println("Updated " + paramName + " to " + String(newValue));
+                    break;
                 }
             }
-            if (myObject.containsKey("ssid")) {
-                prints["print"] = String((const char *)myObject["ssid"]);
-
-                ssid = (const char *)myObject["ssid"];
-
-                preferences->begin("prefid", false);
-                preferences->putString("SSID", ssid);
-                preferences->end();
+        } else {
+            prints = JsonDocument();
+            prints["print"] = message;
+            if (message == "on") {
+                pins->color[0] = pins->bright;
+                pins->color[1] = 0.;
+                pins->color[2] = pins->bright / 2;
+                neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
+                testlora = true;
+            } else if (message == "off") {
+                pins->color[0] = 0.;
+                pins->color[1] = pins->bright;
+                pins->color[2] = pins->bright;
+                neopixelWrite(pins->LED, pins->color[0], pins->color[1], pins->color[2]); // rose
+                testlora = false;
+                // neopixelWrite(LED, 0, bright, bright); // cyan
+            } else if (message == "alarm") {
+                rtc->goSleep(cap->genVar);
+            } else if (message == "restart") {
+                ESP.restart();
+            } else if (message == "sync") {
+                syncRTC();
+            } else if (message == "sick") {
+                cap->bSick = !cap->bSick;
+                digitalWrite(pins->ON_SICK, cap->bSick);
+                Serial.println("sick");
+            } else if (message == "wifi") {
+                Serial.println("wifi");
+            } else if (message == "angle") {
+                bAng = !bAng;
+                printInt = 0;
+            } else if (message == "RSSI") {
+                bRSSI = !bRSSI;
+                printInt = 0;
+            } else if (message == "ldc") {
+                bLDC = !bLDC;
+                printInt = 0;
+            } else if (message == "s_ldc") {
+                bS_LDC = true;
+            } else if (message == "hmc") {
+                bHMC = !bHMC;
+                printInt = 0;
+            } else if (message == "lsm") {
+                bLSM = !bLSM;
+                printInt = 0;
+            } else if (message == "s_lsm") {
+                bS_LSM = true;
+            } else if (message == "s_adxl") {
+                bS_ADXL = true;
+            } else if (message == "s_sick") {
+                bS_SICK = true;
+            } else if (message == "adxl") {
+                cap->bADXL = !cap->bADXL;
+                cap->adxl->printSensorDetails();
+                Serial.println("");
             }
-            if (myObject.containsKey("pwd")) {
-                prints["print"] = String((const char *)myObject["pwd"]);
-
-                password = (const char *)myObject["pwd"];
-
-                preferences->begin("prefid", false);
-                preferences->putString("PWD", password);
-                preferences->end();
-            }
-            if (myObject.containsKey("host")) {
-                prints["print"] = String((const char *)myObject["host"]);
-
-                host = (const char *)myObject["host"];
-
-                preferences->begin("prefid", false);
-                preferences->putString("host", host);
-                preferences->end();
-            }
-            if (myObject.containsKey("gen")) {
-                prints["print"] = String((const char *)myObject["gen"]).toInt();
-                cap->genVar = String((const char *)myObject["gen"]).toInt();
-            }
+            String stringPrints;
+            serializeJson(prints, stringPrints);
+            ws->textAll(stringPrints);
         }
-
-        String stringPrints;
-        serializeJson(prints, stringPrints);
-        ws->textAll(stringPrints);
     }
 }
 void charger::setup() {
+    initParams();
+
     pinMode(pins->BOOT0, INPUT_PULLUP);
-    preferences->begin("prefid", false);
-    cap->id = preferences->getUInt("id", 0);
-    blink = preferences->getUInt("blink", 5);
+    preferences->begin("struct", false);
+    cap->id = preferences->getString("ID", "0").toInt();
+    blink = preferences->getString("BLINK", "5").toInt();
     ssid = preferences->getString("SSID", ssid);
     password = preferences->getString("PWD", password);
-    host = preferences->getString("host", host);
+    host = preferences->getString("HOST", host);
     preferences->end();
     serverRoutes();
     ElegantOTA.begin(server); // Start ElegantOTA
@@ -877,8 +795,8 @@ int charger::manageLoop() {
     } else {
         if (!rtc->chg) {
             // sleep
-            preferences->begin("prefid", false);
-            int idRead = preferences->getUInt("sleepNoMeas", 33);
+            preferences->begin("struct", false);
+            int idRead = preferences->getString("SLEEPNOMEAS", "2").toInt();
             preferences->end();
             rtc->goSleep(idRead * 60);
         } else {

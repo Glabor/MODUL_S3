@@ -63,7 +63,25 @@ bool capteurs::lsmSetup(void) {
     Serial.println("init angle: w = " + String(rot->w) + " w_raw = " + String(rot->w_raw) + " gz = " + String(gyro.gyro.z));
     return true;
 }
-
+bool capteurs::bmeSetup() {
+    if (!bme.begin(0x77)) {
+        Serial.println("Could not find a valid BME280 sensor, check wiring!");
+        return false;
+    }
+    bme.setSampling(Adafruit_BME280::MODE_FORCED,
+                    Adafruit_BME280::SAMPLING_X16, // temperature
+                    Adafruit_BME280::SAMPLING_X16, // pressure
+                    Adafruit_BME280::SAMPLING_X16, // humidity
+                    Adafruit_BME280::FILTER_OFF);
+    bool btake = bme.takeForcedMeasurement();
+    float t = bme.readTemperature();
+    float p = bme.readPressure() / 100000.0;
+    float u = bme.readHumidity();
+    Serial.println("temperature " + String(t) + "*C");
+    Serial.println("pression " + String(p) + "Bar");
+    Serial.println("humidity " + String(u) + "%");
+    return true;
+}
 bool capteurs::adxlSetup(void) {
     SPI.begin(pins->ADXL375_SCK, pins->ADXL375_MISO, pins->ADXL375_MOSI);
     SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
@@ -92,6 +110,74 @@ void lire() {
     }
     Serial.println();
     delay(100);
+}
+
+void capteurs::mesureLisse(long senstime, capteurs::Metadata meta) {
+    Serial.println("#############");
+    Serial.print("Meta speed = ");
+    Serial.println(meta.speed);
+    Serial.print("Meta angle = ");
+    Serial.println(meta.initangle);
+    Serial.print("Meta ring = ");
+    Serial.println(meta.ring);
+
+    file = binFile();
+    file.header.addMetaData("date", rtc->rtc.now());
+    unsigned long time0 = micros();
+    file.header.addMetaData("id", id);
+    file.header.addMetaData("speed", meta.speed);
+    file.header.addMetaData("initangle", meta.initangle);
+    file.header.addMetaData("ring", meta.ring);
+    file.header.addMetaData("timestamp", meta.timestamp);
+    measurement lsm;
+    lsm.addField(field("time", "microsecond", UNSIGNED_4BYTES_B, 1));
+    lsm.addField(field("acc_x", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("acc_y", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("acc_z", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_x", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_y", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_z", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.nRow = 1; // async
+    file.header.addMeasurement(lsm);
+    measurement hmc;
+    hmc.addField(field("time_set", "microsecond", UNSIGNED_4BYTES_B, 1));
+    hmc.addField(field("x_set", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.addField(field("y_set", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.addField(field("z_set", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.addField(field("time_reset", "microsecond", UNSIGNED_4BYTES_B, 1));
+    hmc.addField(field("x_reset", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.addField(field("y_reset", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.addField(field("z_reset", "number", UNSIGNED_3BYTES_B, 1));
+    hmc.nRow = 10;
+    file.header.addMeasurement(hmc);
+    unsigned long t0 = millis();
+    unsigned long ta_micro;
+    String fn = getName("lisse");
+    newName = fn;
+    file.writeHeader(fn);
+    HW->ADCsetup();
+    bool s = false;
+    Serial.println("begin lisse");
+    r = 0;
+    while (millis() < t0 + senstime * 1000) {
+        ta_micro = micros() - time0;
+        for (size_t j = 0; j < 4; j++) {
+            sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
+            r++;
+        }
+        getSens("lsm");
+        getSens("lsmGyro");
+        for (int j = 0; j < r; j++) {
+            file.outFile.write(sdBuf[j]);
+        }
+        r = 0;
+        for (int i = 0; i < 9; i++) {
+            HW->SR_pwm(file.outFile, false);
+        }
+        HW->SR_pwm(file.outFile, true);
+    }
+    file.close();
+    Serial.println("end lisse");
 }
 
 void capteurs::HMRsetup() {
@@ -160,14 +246,42 @@ void capteurs::mesurePicot(long senstime) {
     w0 = rot->wheelRot2();
     String fn = getName("picot");
     newName = fn;
-    File file = SD_MMC.open(fn, FILE_WRITE);
+    preferences->begin("struct", false);
+    int rm = preferences->getUInt("RAYONMOLETTE", 229);
+    int R = preferences->getUInt("RAD", 4500);
+    preferences->end();
+    // File file = SD_MMC.open(fn, FILE_WRITE);
+    file = binFile();
+    file.header.addMetaData("date", rtc->rtc.now());
+    file.header.addMetaData("id", id);
+    file.header.addMetaData("r_molette", rm);
+    file.header.addMetaData("r_profil", R);
+    measurement lsm;
+    lsm.addField(field("time", "microsecond", UNSIGNED_4BYTES_B, 1));
+    lsm.addField(field("acc_x", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("acc_y", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("acc_z", "m/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_x", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_y", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.addField(field("gyro_z", "rad/s^-2", SIGNED_2BYTES_B, 100));
+    lsm.nRow = 1;
+    file.header.addMeasurement(lsm);
+    measurement sick;
+    sick.addField(field("time", "microsecond", UNSIGNED_4BYTES_B, 1));
+    sick.addField(field("sick", "number", UNSIGNED_2BYTES_B, 1));
+    sick.nRow = 100;
+    file.header.addMeasurement(sick);
     unsigned long t0 = millis();
     unsigned long time0 = micros();
     unsigned long ta_micro;
-    if (!file) {
+    file.writeHeader(fn);
+    file.header.print();
+    if (!file.outFile) {
         return;
     }
+    int nc = 0;
     while (millis() < t0 + senstime * 1000) {
+        nc++;
         ta_micro = micros() - time0;
         for (size_t j = 0; j < 4; j++) {
             sdBuf[r] = lowByte(ta_micro >> 8 * (3 - j));
@@ -176,7 +290,7 @@ void capteurs::mesurePicot(long senstime) {
         getSens("lsm");
         getSens("lsmGyro");
         for (int j = 0; j < r; j++) {
-            file.write(sdBuf[j]);
+            file.outFile.write(sdBuf[j]);
         }
         r = 0;
         for (int i = 0; i < 100; i++) {
@@ -186,16 +300,18 @@ void capteurs::mesurePicot(long senstime) {
                 r++;
             }
             getSens("sick");
-            for (int j = 0; j < r; j++) {
-                file.write(sdBuf[j]);
+            for (size_t j = 0; j < r; j++) {
+
+                file.outFile.write(sdBuf[j]);
             }
             r = 0;
         }
     }
     wf = rot->w;
-    file.flush();
     file.close();
     digitalWrite(pins->ON_SICK, LOW);
+    Serial.print("measurement done: nb de cycles ");
+    Serial.println(nc);
 }
 
 void capteurs::mesureRipper(long senstime, String sens) {
@@ -203,15 +319,26 @@ void capteurs::mesureRipper(long senstime, String sens) {
     String fn = getName(sens);
     Serial.println(fn);
     int startMillis = millis();
-    File file = SD_MMC.open(fn, FILE_WRITE);
+    // File file = SD_MMC.open(fn, FILE_WRITE);
+    file = binFile();
+    file.header.addMetaData("date", rtc->rtc.now());
+    file.header.addMetaData("id", id);
     unsigned long time0 = micros();
     newName = fn;
-    if (!file) {
-        return;
-    }
+
     SPI.end();
     pinSetup();
     if (!initSens(sens)) {
+        return;
+    }
+    measurement ldc;
+    ldc.addField(field("time", "microsecond", UNSIGNED_4BYTES_B, 1));
+    ldc.addField(field("f1", "Hz", UNSIGNED_3BYTES_B, 1));
+    ldc.addField(field("f2", "Hz", UNSIGNED_3BYTES_B, 1));
+    ldc.nRow = 1;
+    file.header.addMeasurement(ldc);
+    file.writeHeader(fn);
+    if (!file.outFile) {
         return;
     }
     unsigned long t0 = millis();
@@ -260,19 +387,82 @@ void capteurs::mesureRipper(long senstime, String sens) {
             }
         }
         for (int j = 0; j < r; j++) {
-            file.write(sdBuf[j]);
+            file.outFile.write(sdBuf[j]);
         }
         r = 0;
     }
-    file.flush();
     file.close();
 }
-
+bool capteurs::initHeader(String sens) {
+    file = binFile(); // reset header
+    file.header.addMetaData("date", rtc->rtc.now());
+    file.header.addMetaData("id", id);
+    if (sens == "lsm") {
+        measurement lsm;
+        lsm.addField(field("time", "microsecond", UNSIGNED_4BYTES_L, 1));
+        lsm.addField(field("acc_x", "m/s^-2", FLOAT, 1));
+        lsm.addField(field("acc_y", "m/s^-2", FLOAT, 1));
+        lsm.addField(field("acc_z", "m/s^-2", FLOAT, 1));
+        lsm.addField(field("gyro_x", "rad/s^-2", FLOAT, 1));
+        lsm.addField(field("gyro_y", "rad/s^-2", FLOAT, 1));
+        lsm.addField(field("gyro_z", "rad/s^-2", FLOAT, 1));
+        lsm.nRow = 1;
+        file.header.addMeasurement(lsm);
+        file.bind("time", &t_micro);
+        uint32_t v = 0;
+        file.bind("sick", &v);
+        file.bind("acc_x", &accel.acceleration.x);
+        file.bind("acc_y", &accel.acceleration.y);
+        file.bind("acc_z", &accel.acceleration.z);
+        file.bind("gyro_x", &gyro.gyro.x);
+        file.bind("gyro_y", &gyro.gyro.y);
+        file.bind("gyro_z", &gyro.gyro.z);
+    } else if (sens == "adxl") {
+        measurement adxl;
+        adxl.addField(field("time", "microsecond", UNSIGNED_4BYTES_L, 1));
+        adxl.addField(field("acc_x", "m/s^-2", FLOAT, 1));
+        adxl.addField(field("acc_y", "m/s^-2", FLOAT, 1));
+        adxl.addField(field("acc_z", "m/s^-2", FLOAT, 1));
+        adxl.nRow = 1;
+        file.header.addMeasurement(adxl);
+        file.bind("time", &t_micro);
+        uint32_t v = 0;
+        file.bind("sick", &v);
+        file.bind("acc_x", &accel.acceleration.x);
+        file.bind("acc_y", &accel.acceleration.y);
+        file.bind("acc_z", &accel.acceleration.z);
+    }
+    if (sens == "sick") {
+        measurement sick;
+        sick.addField(field("time", "microsecond", UNSIGNED_4BYTES_L, 1));
+        sick.addField(field("sick", "number", UNSIGNED_2BYTES_L, 1));
+        sick.nRow = 1;
+        file.header.addMeasurement(sick);
+        file.bind("time", &t_micro);
+        file.bind("sick", &v);
+    } else if (sens == "LDC1") {
+        if (pins->LHR_CS_1 < 0) {
+            return false;
+        }
+        measurement ldc;
+        ldc.addField(field("time", "microsecond", UNSIGNED_4BYTES_L, 1));
+        ldc.addField(field("f1", "Hz", UNSIGNED_3BYTES_L, 1));
+        ldc.addField(field("f2", "Hz", UNSIGNED_3BYTES_L, 1));
+        ldc.nRow = 1;
+        file.header.addMeasurement(ldc);
+        file.bind("time", &t_micro);
+        file.bind("f1", (uint32_t *)&ldc1->f1);
+        file.bind("f2", (uint32_t *)&ldc1->f2);
+    }
+    return true;
+}
 bool capteurs::initSens(String sens) {
     Serial.println(sens);
+    if (sens == "bme") {
+        return bmeSetup();
+    }
     if (sens == "lsm") {
         return lsmSetup();
-
     } else if (sens == "adxl") {
         return adxlSetup();
     }
@@ -299,6 +489,12 @@ bool capteurs::initSens(String sens) {
 }
 
 void capteurs::getSens(String sens) {
+    if (sens == "bme") {
+        bme.takeForcedMeasurement();
+        accBuffering((int)(bme.readTemperature() * 10));
+        accBuffering((int)(bme.readPressure()));
+        accBuffering((int)(bme.readHumidity() * 10));
+    }
     if (sens == "lsm") {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
@@ -325,11 +521,11 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(gyro.gyro.z * 100));
         return;
     } else if (sens == "adxl") {
-        sensors_event_t event;
-        adxl->getEvent(&event);
-        accBuffering((int)(event.acceleration.x * 100));
-        accBuffering((int)(event.acceleration.y * 100));
-        accBuffering((int)(event.acceleration.z * 100));
+        // sensors_event_t event;
+        adxl->getEvent(&accel);
+        accBuffering((int)(accel.acceleration.x * 100));
+        accBuffering((int)(accel.acceleration.y * 100));
+        accBuffering((int)(accel.acceleration.z * 100));
         return;
     }
     if (sens == "sick") {
@@ -338,11 +534,10 @@ void capteurs::getSens(String sens) {
         float val1 = 0;
         while ((micros() - micros1) < 1000) {
             count1++;
-            val1 = (float)((val1 * (count1 - 1) + (float)analogRead(pins->SICK1)) /
-                           (float)count1); // read adc
+            val1 = (float)((val1 * (count1 - 1) + (float)analogRead(pins->SICK1)) / (float)count1); // read adc
         }
-        int val = (int)val1;
-        accBuffering(val);
+        v = (uint32_t)val1;
+        accBuffering(v);
         return;
     } else if (sens == "hmr") // add variables for HMR measure
     {
@@ -403,7 +598,7 @@ String capteurs::getName(String sens) {
     String beginStr = fileDate.substring(0, 5);
     String endStr = fileDate.substring(5, 10);
     String name =
-        "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".bin";
+        "/" + sens + "/" + beginStr + "/" + endStr + "/" + sens + ".sbf";
     int index = 0;
     Serial.println("SUBSTRINGS OF " + name);
     while (name.indexOf("/", index) >= 0) {
@@ -425,14 +620,20 @@ void capteurs::saveSens(String sens, int sensTime) {
     if (!initSens(sens)) {
         return;
     }
+    if (!initHeader(sens)) {
+        return;
+    }
     String fn = getName(sens);
     Serial.println(fn);
     int startMillis = millis();
-    File file = SD_MMC.open(fn, FILE_WRITE);
+    // File file = SD_MMC.open(fn, FILE_WRITE);
+    file.writeHeader(fn);
     unsigned long time0 = micros();
     newName = fn;
-
-    if (file) {
+    preferences->begin("struct", false);
+    int duration = preferences->getUInt("DUR", 10);
+    preferences->end();
+    if (file.outFile) {
         while ((millis() - startMillis) < sensTime * 1000) {
             // change LED color
             float prog =
@@ -443,21 +644,25 @@ void capteurs::saveSens(String sens, int sensTime) {
             // get data;
             r = 0;
             // accBuffering((int)(millis() - startMillis));
-            unsigned long ta_micro = micros() - time0;
+            /*unsigned long ta_micro = micros() - time0;
             for (size_t i = 0; i < 4; i++) {
                 sdBuf[r] = lowByte(ta_micro >> 8 * (3 - i));
                 r++;
-            }
+            }*/
 
             getSens(sens);
+            r = 0;
+            t_micro = micros() - time0;
+            file.writeMeasurement(0);
 
             // write data
-            for (int j = 0; j < r; j++) {
+            /*for (int j = 0; j < r; j++) {
                 file.write(sdBuf[j]);
-            }
+            }*/
         }
     }
-    file.flush();
+    // file.flush();
+    Serial.println("recording  finished");
     file.close();
     digitalWrite(pins->ON_SICK, bSick);
 }

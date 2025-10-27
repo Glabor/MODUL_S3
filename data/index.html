@@ -13,6 +13,20 @@
       <div class="form-group">
         <label for="variableSelect">Select a variable:</label>
         <span class="obj">
+          <select id="paramSelect"></select>
+        </span>
+        <br />
+        <!-- <label>Name:</label> <span class="obj" id="paramName"></span><br /> -->
+        <label for="currentValue">Current Value:</label>
+        <span class="obj" id="paramValue"
+          ><input type="text" id="currentValue" readonly /></span
+        ><br />
+        <label>New Value:</label>
+        <span class="obj"
+          ><input type="text" id="newValue" />
+          <button onclick="updateValue()">Update</button></span
+        >
+        <!-- <span class="obj">
           <select
             id="variableSelect"
             onchange="javascript:updateCurrentValue();"
@@ -29,9 +43,9 @@
             <option value="measTime">Measure minute</option>
             <option value="transTime">Transmit minute</option>
           </select>
-        </span>
+        </span> -->
       </div>
-      <div class="form-group">
+      <!-- <div class="form-group">
         <label for="currentValue">Current value:</label>
         <span class="obj">
           <input type="text" id="currentValue" readonly />
@@ -45,11 +59,11 @@
         <span class="obj">
           <button onclick="updateVariable()">Submit</button>
         </span>
-      </div>
+      </div> -->
     </div>
 
     <!-- Hidden elements to store variable values -->
-    <div id="id" data-value="%ID%" style="display: none"></div>
+    <!-- <div id="id" data-value="%ID%" style="display: none"></div>
     <div id="sleep" data-value="%SLEEP%" style="display: none"></div>
     <div id="ssid" data-value="%SSID%" style="display: none"></div>
     <div id="pwd" data-value="%PWD%" style="display: none"></div>
@@ -63,7 +77,7 @@
       style="display: none"
     ></div>
     <div id="measTime" data-value="%MEASTIME%" style="display: none"></div>
-    <div id="transTime" data-value="%TRANSTIME%" style="display: none"></div>
+    <div id="transTime" data-value="%TRANSTIME%" style="display: none"></div> -->
 
     <!-- __________________________________________________________ -->
     <p>
@@ -88,9 +102,7 @@
     </p>
     <p>
       Synchronize RTC :
-      <button class="button rtc obj" onclick="websocket.send('sync')">
-        SYNC
-      </button>
+      <button class="button rtc obj" onclick="sendDateTime()">SYNC</button>
     </p>
     <p>
       Battery level :

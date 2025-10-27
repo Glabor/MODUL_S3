@@ -12,6 +12,11 @@ angle::angle(Adafruit_LSM6DSOX* acc,String modele) {
         rotmat[4]=-1;//axe y vers le haut
         rotmat[8]=1;//axe z vers l'avant
     }
+    else if(modele=="hmcL17"){
+        rotmat[1]=1;//axe y vers la droite
+        rotmat[5]=-1;//axe z vers le haut
+        rotmat[6]=1;//axe x vers l'avant
+    }
     else{//ancien l17
         rotmat[0]=1;//axe x vers la droite
         rotmat[4]=1;//axe y vers le bas

@@ -87,6 +87,41 @@ public:
         logFile.flush();
         logFile.close();
     }
+    void logBME(float batvolt, bool waitingtrans = false, float w = 0, float t = 0, float p = 0, float u = 0) {
+        float RTCtemp = rtc.getTemperature();
+        File logFile = SD_MMC.open("/log.txt", FILE_APPEND);
+        if (logFile) {
+            logFile.print("\n");
+            logFile.print("ON : ");
+            logFile.println(dateRTC(rtc.now()));
+            logFile.print("bat");
+            logFile.print(String(batvolt));
+            logFile.println("V");
+            logFile.print("RTC temp: ");
+            logFile.println(String(RTCtemp));
+            logFile.print("RDC speed: ");
+            logFile.print(String(w / 2 / M_PI * 60));
+            logFile.println("rpm");
+            logFile.println("temperature " + String(t) + "*C");
+            logFile.println("pression " + String(p) + "Bar");
+            logFile.println("humidity " + String(u) + "%");
+            if (abs(w) < M_PI / 60) {
+                logFile.println("back to sleep");
+            } // 0.5RPM
+            else {
+                if (waitingtrans) {
+                    preferences->begin("prefid", false);
+                    logFile.print("begin transmission: ");
+                    logFile.println(preferences->getString("NEWNAME", ""));
+                    preferences->end();
+                } else {
+                    logFile.println("begin measurement");
+                }
+            }
+        }
+        logFile.flush();
+        logFile.close();
+    }
     void goSleepMinuteFixe(int sleepMinutes, int minute) {
         DateTime d0 = rtc.now();
         DateTime d1 = DateTime(d0.year(), d0.month(), d0.day(), d0.hour(), minute, 0);
@@ -195,15 +230,15 @@ public:
             return false;
         }
         DateTime tmin = DateTime(s.substring(0, 4).toInt(), s.substring(5, 7).toInt(), s.substring(8).toInt(), 0, 0);
-        preferences->begin("prefid", false);
+        preferences->begin("struct", false);
         // preferences->putULong("forceWakeupDate", tmin.secondstime());
-        preferences->putULong("forceWakeupDate", tmin.unixtime());
+        preferences->putULong("DATE", tmin.unixtime());
         preferences->end();
         return true;
     }
     String getForceWakeupDate() {
-        preferences->begin("prefid", false);
-        long timestampmin = preferences->getULong("forceWakeupDate", 0);
+        preferences->begin("struct", false);
+        long timestampmin = preferences->getULong("DATE", 0);
         preferences->end();
         DateTime tmin = DateTime(timestampmin);
         return String(tmin.year()) + "/" + String(tmin.month()) + "/" + String(tmin.day());
@@ -227,8 +262,8 @@ public:
         ESP.restart();
     };
     void goSleep40Days() {
-        preferences->begin("prefid", false);
-        unsigned long timestampmin = preferences->getULong("forceWakeupDate", 0);
+        preferences->begin("struct", false);
+        unsigned long timestampmin = preferences->getULong("DATE", 0);
         preferences->end();
         DateTime tmin = DateTime(timestampmin);
         if (rtc.now() > tmin) {
@@ -240,8 +275,8 @@ public:
         int wakeTime = wake0 + sysID * 30;
         int sleepCyc[3] = {2000, 1, 8};
         int sleepT = sleepCyc[sleepMode];
-        preferences->begin("prefid", false);
-        int idRead = preferences->getUInt("sleep", 30);
+        preferences->begin("struct", false);
+        int idRead = preferences->getUInt("SLEEPMEAS", 30);
         preferences->end();
         int block = idRead;
         int nowTime = rtc.now().unixtime();

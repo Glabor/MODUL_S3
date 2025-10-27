@@ -121,7 +121,7 @@ byte *hw::ADC_conv() {
     int time3 = millis();
     bool timeOut = false;
 
-    while ((drdy1 != 1 || drdy2 != 1 || drdy3 != 1) & (millis() - time3 < 20)) {
+    while ((drdy1 != 1 || drdy2 != 1 || drdy3 != 1) & (millis() - time3 < 10)) {
         drdy1 = CheckStatus_ADC(0x38, adc1); // function to check status register
         drdy2 = CheckStatus_ADC(0x38, adc2); // function to check status register
         drdy3 = CheckStatus_ADC(0x38, adc3); // function to check status register
@@ -160,6 +160,43 @@ void hw::SR_pwm() {
     s = true;          // if i = true , then ADC conversion during RESET
     Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
     ADC_conv();
+}
+
+bool hw::SR_pwm(File inFile, bool flush) {
+    bool res = r > 0;
+    uint32_t time;
+    digitalWrite(set, HIGH);
+    delayMicroseconds(50);
+    s = false;
+    Write(0x01, 0x70);
+    if (inFile) {
+        inFile.write(dataBuffer, r);
+        r = 0;
+    }
+    r = 4;
+    ADC_conv();
+    time = micros();                 // time_set
+    for (size_t i = 0; i < 4; i++) { // time in dataBuffer
+        dataBuffer[i] = lowByte(time >> 8 * (3 - i));
+    }
+    digitalWrite(set, LOW);
+    delayMicroseconds(50);
+    s = true;          // if i = true , then ADC conversion during RESET
+    Write(0x01, 0x70); // writes to CONV_START - result stored in DATA7
+    r = 17;
+    ADC_conv();
+    time = micros();                 // time_reset
+    for (size_t i = 0; i < 4; i++) { // time in dataBuffer
+        dataBuffer[i + 13] = lowByte(time >> 8 * (3 - i));
+    }
+    // Serial.print(r);
+    if (flush) {
+        if (inFile) {
+            inFile.write(dataBuffer, r);
+            r = 0;
+        }
+    }
+    return res;
 }
 
 void hw::measureHMR(int measTime, String sensName) {
