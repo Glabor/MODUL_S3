@@ -276,7 +276,7 @@ public:
         int sleepCyc[3] = {2000, 1, 8};
         int sleepT = sleepCyc[sleepMode];
         preferences->begin("struct", false);
-        int idRead = preferences->getUInt("SLEEPMEAS", 30);
+        int idRead = preferences->getString("SLEEPMEAS", "30").toInt();
         preferences->end();
         int block = idRead;
         int nowTime = rtc.now().unixtime();

@@ -58,7 +58,7 @@ void comLORA::pinSetup() {
 
 void comLORA::rfSend(String message) {
     preferences->begin("struct", false);
-    int id = preferences->getUInt("ID", 99);
+    int id = preferences->getString("ID", "99").toInt();
     String mess2Send = "TT"; // message texte
     preferences->end();
     mess2Send += message;

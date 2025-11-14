@@ -64,7 +64,7 @@ bool capteurs::lsmSetup(void) {
     return true;
 }
 bool capteurs::bmeSetup() {
-    if (!bme.begin(0x77)) {
+    if (!bme.begin(0x76)) {
         Serial.println("Could not find a valid BME280 sensor, check wiring!");
         return false;
     }
@@ -80,6 +80,30 @@ bool capteurs::bmeSetup() {
     Serial.println("temperature " + String(t) + "*C");
     Serial.println("pression " + String(p) + "Bar");
     Serial.println("humidity " + String(u) + "%");
+    return true;
+}
+bool capteurs::adsSetup() {
+    Serial.println("Setup ADS1015");
+    if (!ads1015.begin(0x49)) {
+        Serial.println("Couldn't find ADS1015 ADC on address 0x49");
+        return false;
+    };
+    ads1015.setGain(GAIN_TWO);
+    Serial.print("Gain is : ");
+    Serial.println(ads1015.getGain());
+    int16_t adc0, adc1, adc2, adc3;
+    adc0 = ads1015.readADC_SingleEnded(0);
+    Serial.print("AIN0: ");
+    Serial.println(adc0);
+    adc1 = ads1015.readADC_SingleEnded(1);
+    Serial.print("AIN1: ");
+    Serial.println(adc1);
+    adc2 = ads1015.readADC_SingleEnded(2);
+    Serial.print("AIN2: ");
+    Serial.println(adc2);
+    adc3 = ads1015.readADC_SingleEnded(3);
+    Serial.print("AIN3: ");
+    Serial.println(adc3);
     return true;
 }
 bool capteurs::adxlSetup(void) {
@@ -247,8 +271,8 @@ void capteurs::mesurePicot(long senstime) {
     String fn = getName("picot");
     newName = fn;
     preferences->begin("struct", false);
-    int rm = preferences->getUInt("RAYONMOLETTE", 229);
-    int R = preferences->getUInt("RAD", 4500);
+    int rm = preferences->getString("RAYONMOLETTE", "229").toInt();
+    int R = preferences->getString("RAD", "4500").toInt();
     preferences->end();
     // File file = SD_MMC.open(fn, FILE_WRITE);
     file = binFile();
@@ -495,6 +519,22 @@ void capteurs::getSens(String sens) {
         accBuffering((int)(bme.readPressure()));
         accBuffering((int)(bme.readHumidity() * 10));
     }
+    if (sens == "ads") {
+        int16_t adc0, adc1, adc2, adc3;
+        // adc0 = ads1015.readADC_SingleEnded(0);
+        // Serial.print("AIN0: ");
+        // Serial.println(adc0);
+        // adc1 = ads1015.readADC_SingleEnded(1);
+        // Serial.print("AIN1: ");
+        // Serial.println(adc1);
+        adc2 = ads1015.readADC_SingleEnded(2);
+        genVar = adc2;
+        Serial.print("AIN2: ");
+        Serial.println(adc2);
+        // adc3 = ads1015.readADC_SingleEnded(3);
+        // Serial.print("AIN3: ");
+        // Serial.println(adc3);
+    }
     if (sens == "lsm") {
         sensors_event_t event;
         dsox.getEvent(&accel, &gyro, &temp);
@@ -631,7 +671,8 @@ void capteurs::saveSens(String sens, int sensTime) {
     unsigned long time0 = micros();
     newName = fn;
     preferences->begin("struct", false);
-    int duration = preferences->getUInt("DUR", 10);
+    int duration = preferences->getString("DUR", "10").toInt();
+    ;
     preferences->end();
     if (file.outFile) {
         while ((millis() - startMillis) < sensTime * 1000) {

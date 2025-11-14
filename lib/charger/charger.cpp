@@ -14,6 +14,7 @@ void charger::initParams() {
     newParam("ID", "0", "ID");
     newParam("Measure duration (s)", "10", "DUR");
     newParam("Tool radius (mm)", "4500", "RAD");
+    newParam("Cutter Radius (mm)", "229", "RAYONMOLETTE");
     newParam("Forced wakeup date (yy/mm/dd)", "2015/01/01", "DATE");
     newParam("Wifi SSID", "GL-AR300M-c40", "SSID");
     newParam("Wifi password", "goodlife", "PWD");
@@ -356,7 +357,7 @@ int charger::httpPostRequest(String serverName, String postText) {
 int charger::sendFlask() {
     JsonDocument info;
     info["batt"] = cap->battSend;
-    info["temp"] = (int)(rtc->rtc.getTemperature()*100);
+    info["temp"] = (int)(rtc->rtc.getTemperature() * 100);
     info["bWifi"] = bWifi;
     info["etrNum"] = cap->id;
 

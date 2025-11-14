@@ -7,6 +7,7 @@
 #include "hw.h"
 #include "pinout.h"
 #include "rtcClass.h"
+#include <Adafruit_ADS1X15.h>
 #include <Adafruit_ADXL375.h>
 #include <Adafruit_BME280.h>
 #include <Adafruit_LSM6DSO32.h>
@@ -20,6 +21,7 @@ public:
     void pinSetup();
     bool lsmSetup();
     bool bmeSetup();
+    bool adsSetup();
     bool adxlSetup();
     void saveSens(String sens, int sensTime);
     void accBuffering(int meas);
@@ -48,6 +50,7 @@ public:
     bool bSick = false;
     Adafruit_ADXL375 *adxl = nullptr;
     Adafruit_BME280 bme;
+    Adafruit_ADS1015 ads1015;
     sensors_event_t accel;
     sensors_event_t gyro;
     sensors_event_t temp;
